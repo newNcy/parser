@@ -7,8 +7,12 @@ include_directories(src)
 add_definitions(-g)
 
 add_executable(main 
-	src/main.c
 	src/lex.c
+    src/expression.c
+    src/declaration.c
+    src/first_set.c
+    src/parser.c
+	src/main.c
 	)
 
 

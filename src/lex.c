@@ -166,7 +166,7 @@ int ** getTable()
 				}else {
 					table[pre][c] = ++s;
 				}
-				printf("table[%d]['%c'] = %d\n", pre, c+'a', table[pre][c]);
+				//printf("table[%d]['%c'] = %d\n", pre, c+'a', table[pre][c]);
 				pre = s;
 			}
 		}
@@ -192,11 +192,11 @@ Token parseIdOrKeyword(Source * s)
 		if (state != Id && lowerCase(c))  {
 			if (state >= Void) {
 				state = Id;
-				printf("%d -%c-> Id\n",state,c);
+				//printf("%d -%c-> Id\n",state,c);
 			}else {
 				int next = table[state][c-'a'];
 				if (next == 0) next = Id;
-				printf("%d -%c-> %d\n",state,c,next);
+				//printf("%d -%c-> %d\n",state,c,next);
 				state = next;
 			}
 		}else {
