@@ -47,7 +47,11 @@ void match(Source * s,Tag t)
 	next(s);
 }
 
-#define P(X) Node * X		(Source * s)
+#define FIRST(X) int first_##X(Source * s) //求某个符号的first集
+#define FIRSTOF(X) first_##X(s)
+
+#define P(X) \
+Node * X(Source * s)
 #define P_(X) Node * X##_	(Node * first, Source * s)
 #define TO(X) X(s)
 #define X(C)  match(s,C);
@@ -59,7 +63,6 @@ void match(Source * s,Tag t)
 
 P( primary_expression			);
 P( postfix_expression			);
-P( argument_expression_list		);
 P( argument_expression_list		);
 P( unary_expression				);
 P( unary_operator				);
@@ -137,8 +140,11 @@ P( declaration_list				);
 /* 辅助过程 xx_*/
 P_(expression);
 
-#define FIRST(X) int firstOf##X(Source * s)
-#define FIRSTOF(X) firstOf##X(s)
+
+
+
+
+
 FIRST(primary_expression)
 {
 	switch(look(s).tag) {
@@ -157,6 +163,11 @@ FIRST(primary_expression)
 
 }
 
+FIRST(postfix_expression) 
+{
+    return FIRSTOF(primary_expression);
+}
+
 FIRST(unary_expression)
 {
 	switch(look(s).tag) {
@@ -172,14 +183,14 @@ FIRST(unary_expression)
 		case Sizeof:
 			return 1;
 		/* first set of primary expr*/
+        default:
+	        return FIRSTOF(postfix_expression);
 	}
-	return FIRSTOF(postfix_expression);
 
 }
 
-#undef FIRST
 
-#define FIRST(X) firstOf##X(look(s).tag)
+
 
 
 /* 先搞表达式 */
@@ -207,23 +218,16 @@ P( primary_expression )
 
 }
 
-
+/*
+ * assignment_expression    ->  conditional_expression
+ *                          |   unary_expression assignment_operator assignment_expression
+ */
 P(assignment_expression)
 {
-	switch(look(s).tag) {
-		/* first set of unary expr*/
-		case SPlus:
-		case SSub:
-		case '&':
-		case '*':
-		case '+':
-		case '-':
-		case '~':
-		case '!':
-		case Sizeof:
-		
-		/* first set of primary expr*/
-	}
+    if (look(s).tag == '(') {
+        next(s);
+        Node * first = newNode('(');
+    }
 }
 
 
