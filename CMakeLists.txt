@@ -1,16 +1,16 @@
 
 project(n)
 
-cmake_minimum_required(VERSION 3.14)
 
 include_directories(src)
 
-add_definitions(-g)
+add_definitions(-g -std=c99)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 #target
 add_executable(main 
+	src/queue.c
 	src/lex.c
     src/expression.c
     src/declaration.c

@@ -1,3 +1,4 @@
+#include "lex.h"
 #include "parser.h"
 
 FIRST(primary_expression)
@@ -70,6 +71,14 @@ FIRST(type_specifier)
             return IN_FIRST(struct_specifier) || IN_FIRST(enum_specifier);
     }
 }
+FIRST(function_specifier)
+{
+	return look(s).tag == Inline;
+}
+FIRST(declaration_specifiers)
+{
+	return IN_FIRST(storage_class_specifier) || IN_FIRST(type_specifier) || IN_FIRST(type_qualifier) || IN_FIRST(function_specifier);
+}
 
 FIRST(type_qualifier)
 {
@@ -85,6 +94,17 @@ FIRST(storage_class_specifier)
     default:
         return 0;
     }
+}
+
+FIRST(direct_declarator)
+{
+	switch (look(s).tag) {
+		case Id:
+		case '(':
+			return 1;
+		default:
+			return 0;
+	}
 }
 
 FIRST(declarator)
@@ -112,4 +132,23 @@ FIRST(type_name)
     return IN_FIRST(specifier_qualifier_list);
 }
 
+FIRST(initializer)
+{
+	if (look(s).tag == '{') return 1;
+	return IN_FIRST(assignment_expression);
+}
 
+FIRST(function_definition)
+{
+	return IN_FIRST(declaration_specifiers);
+}
+
+FIRST(declaration)
+{
+	return IN_FIRST(declaration_specifiers);
+}
+
+FIRST(external_declaration)
+{
+	return IN_FIRST(function_definition) || IN_FIRST(declaration);
+}

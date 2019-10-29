@@ -12,13 +12,21 @@ enum Op
 	ARGUMENT_EXPRESSION_LIST,
 	EXPRESSION,
     DECLARATOR,
+    DECLARATION,
     POINTER,
     STRUCT_SPECIFIER,
     ENUM_SPECIFIER,
     TYPE_SPECIFIER,
     TYPE_QUALIFIER_LIST,
     TYPE_QUALIFIER,
+
+	INITIALIZER,
+	INITIALIZER_LIST,
+	INIT_DECLARATOR_LIST,
+	INIT_DECLARATOR,
     DECLARATION_SPECIFIERS,
+	EXTERNAL_DECLARATION,
+	FUNCTION_DEFINITION,
     TRANSLATE_UNIT
 };
 typedef enum Op Op;
@@ -42,10 +50,11 @@ void match(Source * s,Tag t);
 #define FIRST(X) int first_##X(Source * s) //求某个符号的first集
 #define IN_FIRST(X) first_##X(s)
 #define CHECK_FIRST(X) \
-    if (!IN_FIRST(X)) {\
+    while(!IN_FIRST(X) && !eos(s)) {\
         printf("error in "#X"\n"); \
-        return NULL; \
-    }
+		next(s); \
+    } \
+	if (eos(s)) return NULL;
 
 #define P(X) \
 Node * X(Source * s);\
@@ -53,7 +62,6 @@ FIRST(X)
 
 #define P_(X) Node * X##_	(Node * first, Source * s)
 #define NODE(X) X(s)
-#define NODE_(X) X##_(s)
 #define X(C)  match(s,C);
 /*
  * 一下产生式来自c语言文档n1548

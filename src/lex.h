@@ -11,7 +11,7 @@ typedef enum Tag
 	Id,
 
 	If, Else, Switch, Case, Default, While, For, Continue, Break, Return,
-	Extern, Static, Const, 
+	Extern, Static, Const, Inline, 
 
 	ConstChar,ConstInt,ConstFloat,ConstLong,ConstDouble,ConstStr,
 	//括号
@@ -55,6 +55,7 @@ static MapEntry keyMap [] =
 
     {"static",  Static},
     {"extern",  Extern},
+    {"inline",  Inline},
 
 	{"if",		If},
 	{"else",	Else},

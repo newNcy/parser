@@ -1,3 +1,4 @@
+#include "lex.h"
 #include "parser.h"
 
 
@@ -86,13 +87,99 @@ P(declaration_specifiers)
     return declSpec;
 }
 
+P_(init_declarator_list)
+{
+	Node * initl = newNode(INIT_DECLARATOR_LIST);
+	addChild(initl, first);
+	if (eos(s)) return initl;
+	
+	Node * ret = newNode(0);
+}
+
+P(initializer_list)
+{
+	CHECK_FIRST(initializer_list);
+	Node * initerl = newNode(INITIALIZER_LIST);
+	if (IN_FIRST(designation)) {
+		addChild(initerl, NODE(designation));
+	}
+
+}
+
+
+P(initializer)
+{
+	CHECK_FIRST(initializer);
+	Node * initer = newNode(INITIALIZER);
+	if (look(s).tag == '{' ) {
+		addChild(initer, newNode(next(s).tag));
+		addChild(initer, NODE(initializer_list));
+		match(s,'}');
+		addChild(initer, newNode('}'));
+	}else {
+		addChild(initer, NODE(assignment_expression));
+	}
+	return initer;
+}
+
+
 P(external_declaration)
 {
     //左公因子
-    Node * n = newNode(UNKOWN);
+    Node * n = newNode(EXTERNAL_DECLARATION);
     Node * declspec = NODE(declaration_specifiers);
-    addChild(n, declspec);
-    return n;
+	if (look(s).tag == ';') { //external_declaration -> declaration (init_declarator_list) ;
+		Node * d = newNode(DECLARATION);
+		addChild(d, declspec);
+		addChild(d, newNode(next(s).tag));
+		addChild(n , d);
+		return n;
+	}
+	//他俩下一个都是
+	if (!IN_FIRST(declarator)) {
+		printf("error\n");
+		return NULL;
+	}
+
+	Node * dr = NODE(declarator);
+	if (look(s).tag == ';') { //类上
+
+		Node * initd = newNode(INIT_DECLARATOR);
+		addChild(initd, dr);
+
+		Node * initdl = newNode(INIT_DECLARATOR_LIST);
+		addChild(initdl, initd);
+
+		Node * d = newNode(DECLARATION);
+		addChild(d, declspec);
+		addChild(d, initdl);
+		addChild(d, newNode(next(s).tag));
+		addChild(n, d);
+	}else if (look(s).tag == '=') {
+		Node * initd = newNode(INIT_DECLARATOR);
+		addChild(initd, dr);
+		addChild(initd, newNode(next(s).tag));
+		addChild(initd, NODE(initializer)); 
+
+		Node * d = newNode(DECLARATION);
+		Node * initl = newNode(INIT_DECLARATOR_LIST);
+		addChild(initl, initd);
+		addChild(d,init_declarator_list_(initl, s));
+		addChild(n, d);
+	}else if (IN_FIRST(declaration_list) || IN_FIRST(compound_statement) ){//function
+		Node * funcd = newNode(FUNCTION_DEFINITION);
+		addChild(funcd, declspec);
+		addChild(funcd, dr);
+
+		if (IN_FIRST(declaration_list)) { 
+			addChild(funcd, NODE(declaration_list));
+			addChild(funcd, NODE(compound_statement));
+		}else if (IN_FIRST(compound_statement)) {
+			addChild(funcd, NODE(compound_statement));
+		}   
+		addChild(n, funcd);
+	}
+	return n;
 }
 
 /*
@@ -105,20 +192,20 @@ P(external_declaration)
  */
 P_(translation_unit)
 {
-    if (eos(s)) return first;
-    Node * n = newNode(TRANSLATE_UNIT);
-    addChild(n, first);
-    CHECK_FIRST(external_declaration);
-    addChild(n, NODE(external_declaration));
-    return translation_unit_(n, s);
+	if (eos(s)) return first;
+	Node * n = newNode(TRANSLATE_UNIT);
+	addChild(n, first);
+	CHECK_FIRST(external_declaration);
+	addChild(n, NODE(external_declaration));
+	return translation_unit_(n, s);
 }
 
 P(translation_unit)
 {
-    if(eos(s)) return NULL;
-    Node * tu = newNode(TRANSLATE_UNIT);
-    CHECK_FIRST(external_declaration);
-    addChild(tu, NODE(external_declaration));
-    return translation_unit_(tu, s);
+	if(eos(s)) return NULL;
+	Node * tu = newNode(TRANSLATE_UNIT);
+	CHECK_FIRST(external_declaration);
+	addChild(tu, NODE(external_declaration));
+	return translation_unit_(tu, s);
 }
 
