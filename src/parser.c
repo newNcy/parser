@@ -9,6 +9,12 @@ Node * newNode(Op op)
 	node->sbling = NULL;
 	return node;
 }
+Node * newAttrNode(Token t)
+{
+	Node * n = newNode(t.tag);
+	n->attr = t.attr;
+	return n;
+}
 void addChild(Node * p, Node * c)
 {
 	if (p->child == NULL) {

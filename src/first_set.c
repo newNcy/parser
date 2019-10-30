@@ -1,5 +1,6 @@
 #include "lex.h"
 #include "parser.h"
+#include <pthread.h>
 
 FIRST(primary_expression)
 {
@@ -43,6 +44,143 @@ FIRST(unary_expression)
 	        return IN_FIRST(postfix_expression);
 	}
 
+}
+
+
+
+FIRST(labeled_statement)
+{
+	return look(s).tag == Case || look(s).tag == Default;
+}
+FIRST(expression_statement)
+{
+	return IN_FIRST(expression) || look(s).tag == ';';
+}
+
+FIRST(selection_statemen)
+{
+	return look(s).tag == If || look(s).tag == Switch;
+}
+
+FIRST(iteration_statement)
+{
+	return look(s).tag == While || look(s).tag == For;
+}
+
+FIRST(jump_statement) 
+{
+	return look(s).tag == Continue || look(s).tag == Break || look(s).tag == Return;
+
+}
+FIRST(statement)
+{
+	return IN_FIRST(labeled_statement) 
+		|| IN_FIRST(compound_statement)
+		|| IN_FIRST(expression_statement)
+		|| IN_FIRST(selection_statemen)
+		|| IN_FIRST(iteration_statement)
+		|| IN_FIRST(jump_statement);
+}
+
+FIRST(block_item)
+{
+	return IN_FIRST(declaration) || IN_FIRST(statement);
+}
+
+FIRST(block_item_list)
+{
+	return IN_FIRST(block_item);
+}
+
+FIRST(compound_statement)
+{
+	return look(s).tag == '{';
+}
+
+FIRST(declaration_list)
+{
+	return IN_FIRST(declaration);
+}
+
+FIRST(designator_list)
+{
+	return IN_FIRST(designator);
+}
+
+FIRST(designator)
+{
+	return look(s).tag == '[' || look(s).tag == '.';
+}
+
+FIRST(cast_expression)
+{
+	return look(s).tag == '(' || IN_FIRST(unary_expression);
+}
+
+FIRST(multiplicative_expression)
+{
+	return IN_FIRST(cast_expression);
+}
+
+FIRST(additive_expression)
+{
+	return IN_FIRST(multiplicative_expression);
+}
+
+FIRST(shift_expression)
+{
+	return IN_FIRST(additive_expression);
+}
+FIRST(relational_expression)
+{
+	return IN_FIRST(shift_expression);
+}
+
+FIRST(equality_expression)
+{
+	return IN_FIRST(relational_expression);
+}
+
+FIRST(AND_expression)
+{
+	return IN_FIRST(equality_expression);
+}
+
+FIRST(exclusive_OR_expression)
+{
+	return IN_FIRST(AND_expression);
+}
+FIRST(inclusive_OR_expression)
+{
+	return IN_FIRST(exclusive_OR_expression);
+}
+FIRST(logical_AND_expression)
+{
+	return IN_FIRST(inclusive_OR_expression);
+}
+
+FIRST(logical_OR_expression)
+{
+	return IN_FIRST(logical_AND_expression);
+}
+FIRST(conditional_expression)
+{
+	return IN_FIRST(logical_OR_expression);
+}
+
+FIRST(assignment_expression)
+{
+	return IN_FIRST(conditional_expression) || IN_FIRST(unary_expression);
+}
+
+FIRST(expression) 
+{
+	return IN_FIRST(assignment_expression);
+}
+
+FIRST(constant_expression)
+{
+	return IN_FIRST(conditional_expression);
 }
 
 FIRST(enum_specifier)
@@ -132,6 +270,19 @@ FIRST(type_name)
     return IN_FIRST(specifier_qualifier_list);
 }
 
+FIRST(designation)
+{
+	return IN_FIRST(designator_list);
+}
+
+
+FIRST(initializer_list)
+{
+	return IN_FIRST(designation) || IN_FIRST(initializer);
+}
+
+
+
 FIRST(initializer)
 {
 	if (look(s).tag == '{') return 1;
@@ -141,6 +292,18 @@ FIRST(initializer)
 FIRST(function_definition)
 {
 	return IN_FIRST(declaration_specifiers);
+}
+
+
+
+FIRST(init_declarator)
+{
+	return IN_FIRST(declarator);
+}
+
+FIRST(init_declarator_list)
+{
+	return IN_FIRST(init_declarator);
 }
 
 FIRST(declaration)

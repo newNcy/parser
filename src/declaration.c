@@ -1,19 +1,64 @@
 #include "lex.h"
 #include "parser.h"
+#include <pthread.h>
 
 
+P(struct_declaration_list)
+{
+	CHECK_FIRST(struct_declarator);
+	Node * sdl = newNode(STRUCT_DECLARATION_LIST);
+	addChild(sdl, NODE(struct_declarator));
+	while (look(s).tag == ',') {
+		next(s);
+		if (!IN_FIRST(struct_declarator)) {
+			expected(Struct_declarator);
+			break;
+		}
+		Node * t = newNode(STRUCT_DECLARATION_LIST);
+		addChild(t, sdl);
+		addChild(t, newNode(','));
+		addChild(t, NODE(struct_declarator));
+		sdl = t;
+	}
+	return sdl;
+}
 
 P(struct_specifier)
 {
+	CHECK_FIRST(struct_specifier);
     Node * ss = newNode(STRUCT_SPECIFIER);
     addChild(ss, newNode(next(s).tag));
+	if (look(s).tag == Id) {
+		addChild(ss, newAttrNode(next(s)));
+	}
+	if (look(s).tag == '{') {
+		addChild(ss, newAttrNode(next(s)));
+		addChild(ss, NODE(struct_declaration_list));
+		if (look(s).tag != '}') {
+			expected("}");
+		}
+		addChild(ss, newAttrNode(next(s)));
+	}
     return  ss;
 }
 
 P(enum_specifier)
 {
+	CHECK_FIRST(enum_specifier);
     Node * ss = newNode(ENUM_SPECIFIER);
     addChild(ss, newNode(next(s).tag));
+	if (look(s).tag == Id) {
+		addChild(ss, newAttrNode(next(s)));
+	}
+
+	if (look(s).tag == '{') {
+		addChild(ss, newAttrNode(next(s)));
+		addChild(ss, NODE(enumerator_list));
+		if (look(s).tag != '}') {
+			expected("}");
+		}
+		addChild(ss, newAttrNode(next(s)));
+	}
     return  ss;
 }
 
@@ -60,22 +105,156 @@ P(pointer)
 }
 
 
+P(block_item) 
+{
+	printf("block item\n");
+}
+
+P(block_item_list)
+{
+	CHECK_FIRST(block_item_list);
+	Node * bil = newNode(BLOCK_ITEM_LIST);
+	addChild(bil, NODE(block_item));
+	while (IN_FIRST(block_item)) {
+		Node * n = newNode(BLOCK_ITEM_LIST);
+		addChild(n, bil);
+		addChild(n, NODE(block_item));
+		bil = n;
+	}
+	return bil;
+}
+
+P(compound_statement)
+{
+	CHECK_FIRST(compound_statement);
+	Node * cs = newNode(COMPOUND_STATEMENT);
+	addChild(cs, newAttrNode(next(s)));
+	addChild(cs,NODE(block_item_list));
+	if (look(s).tag != '}') {
+		expected("}");
+	}else {
+		addChild(cs, newAttrNode(next(s)));
+	}
+	return cs;
+	
+}
+
+P(init_declarator)
+{
+	CHECK_FIRST(init_declarator);
+	Node * id = newNode(INIT_DECLARATOR);
+	addChild(id, NODE(declarator));
+	if (look(s).tag != '=') return id;
+
+	addChild(id, newAttrNode(next(s)));
+	Node * it = NODE(initializer);
+	if (!it) {
+		expected(Initializer);
+	}
+	addChild(id, it);
+	return id;
+}
+
+
+P(init_declarator_list)
+{
+	CHECK_FIRST(init_declarator_list);
+	Node * idl = newNode(INIT_DECLARATOR_LIST); 
+	addChild(idl, NODE(init_declarator));
+	//这回不用辅助过程了,显式迭代
+	while (!eos(s) && look(s).tag == ',') {
+		Node * n = newNode(INIT_DECLARATOR_LIST);
+		addChild(n,idl);
+		addChild(n, newAttrNode(next(s)));
+		Node * id = NODE(init_declarator);
+		if (!id) {
+			expected(Init_declarator);
+		}
+		addChild(n, id);
+		idl = n;
+	}
+	return idl;
+}
+
+P(declaration)
+{
+	CHECK_FIRST(declaration);
+	Node * d = newNode(DECLARATION);
+	Node * ds = NODE(declaration_specifiers);
+	if (!ds) {
+		expected(Declaration_specifiers);
+	}
+	addChild(d, ds);
+	Node * idl = NODE(init_declarator_list);
+	if (idl) addChild(d, idl);
+	if (look(s).tag == ';') {
+		addChild(d, newAttrNode(next(s)));
+	}else {
+		expected(;);
+	}
+}
+
+P_(declaration_list)
+{
+	if (!IN_FIRST(declaration)) return first;
+	Node * dl = newNode(DECLARATION_LIST);
+	addChild(dl, first);
+	addChild(dl, NODE(declaration));
+	return declaration_list_(dl, s);
+}
+
+P(declaration_list)
+{
+	CHECK_FIRST(declaration_list);
+	Node * dl = newNode(DECLARATION_LIST);
+	addChild(dl, NODE(declaration));
+	return declaration_list_(dl, s);
+}
+
+P(direct_declarator)
+{
+	CHECK_FIRST(direct_declarator);
+	Node * dd = newNode(DIRECT_DECLARATOR);
+	switch(look(s).tag) {
+		case Id:
+			addChild(dd, newAttrNode(next(s)));
+			break;
+		case '(':
+			addChild(dd, newNode(next(s).tag));
+			Node * dr  = NODE(declarator);
+			if (!dr) {
+				expected(declarator);
+			}
+	}
+	return dd;
+}
+
 P(declarator)
 {
     CHECK_FIRST(declarator);
     Node * dc = newNode(DECLARATOR);
-    if (look(s).tag == '*') {
-
-    }
+	if (IN_FIRST(pointer)) {
+		addChild(dc, NODE(pointer));
+	}
+	Node * dd = NODE(direct_declarator);
+	if (!dd) {
+		error("expect direct dclarator\n");
+	}
+	addChild(dc, dd);
+	return dc;
 
 }
 P(storage_class_specifier)
 {
-
+	CHECK_FIRST(storage_class_specifier);
+	Node * scs = newNode(STORAGE_CLASS_SPECIFIER);
+	addChild(scs, newNode(next(s).tag));
+	return scs;
 }
 
 P(declaration_specifiers)
 {
+	CHECK_FIRST(declaration_specifiers);
     Node * declSpec = newNode(DECLARATION_SPECIFIERS);
     if (IN_FIRST(storage_class_specifier)) {
         addChild(declSpec, NODE(storage_class_specifier));
@@ -84,6 +263,9 @@ P(declaration_specifiers)
     }else if (IN_FIRST(type_qualifier)) {
         addChild(declSpec, NODE(type_qualifier));
     }
+	if (IN_FIRST(declaration_specifiers)) {
+		addChild(declSpec, NODE(declaration_specifiers));
+	}
     return declSpec;
 }
 
@@ -106,6 +288,50 @@ P(initializer_list)
 
 }
 
+P(designator)
+{
+	Node * dt = newNode(DESIGNATOR);
+	switch(look(s).tag) {
+		case '[':
+			addChild(dt, newNode(next(s).tag));
+			addChild(dt, NODE(constant_expression));
+			match(s,']');
+			addChild(dt, newNode(']'));
+			break;
+		case '.':
+			addChild(dt, newNode(next(s).tag));
+			Token t = next(s);
+			if (t.tag != Id) {
+				expected(Id);
+			}
+			Node * id = newNode(Id);
+			id->attr = t.attr;
+			addChild(dt, id);
+			break;
+	}
+}
+
+P_(designator_list)
+{
+	if (eos(s) || !IN_FIRST(designator)) return first;
+	Node * dl = newNode(DESIGNATOR_LIST);
+	addChild(dl, first);
+	addChild(dl, NODE(designator));
+	return designator_list_(dl, s);
+}
+
+P(designation)
+{
+	CHECK_FIRST(designation);
+	Node * des = newNode(DESIGNATION);
+	Node * dr = NODE(designator);
+	Node * dl = newNode(DESIGNATOR_LIST);
+	addChild(dl, dr);
+	addChild(des, designator_list_(dl,s));
+	match(s, '=');
+	addChild(des,newNode('='));
+	return des;
+}
 
 P(initializer)
 {
@@ -123,6 +349,7 @@ P(initializer)
 }
 
 
+
 P(external_declaration)
 {
     //左公因子
@@ -137,7 +364,7 @@ P(external_declaration)
 	}
 	//他俩下一个都是
 	if (!IN_FIRST(declarator)) {
-		printf("error\n");
+		expected(Declarator);
 		return NULL;
 	}
 

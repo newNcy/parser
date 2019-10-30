@@ -365,6 +365,7 @@ Token next(Source * s)
 	OP('&')
 	OP('|')
 	OP('!')
+	OP('=')
 
 	#undef OP3
 	#undef OP2

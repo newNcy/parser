@@ -1,5 +1,6 @@
 #pragma once
 #include "lex.h"
+#include <stdarg.h>
 
 
 /* 语法分析 构建抽象语法树 */
@@ -10,6 +11,8 @@ enum Op
 	PRIMARY_EXPRESSION,
 	POSTFIX_EXPRESSION,
 	ARGUMENT_EXPRESSION_LIST,
+	LOGICAL_OR_EXPRESSION,
+	CONDITIONAL_EXPRESSION,
 	EXPRESSION,
     DECLARATOR,
     DECLARATION,
@@ -19,10 +22,18 @@ enum Op
     TYPE_SPECIFIER,
     TYPE_QUALIFIER_LIST,
     TYPE_QUALIFIER,
-
+	BLOCK_ITEM_LIST,
+	STRUCT_DECLARATION_LIST,
+	COMPOUND_STATEMENT,
+	STORAGE_CLASS_SPECIFIER,
+	DESIGNATION,
+	DIRECT_DECLARATOR,
+	DESIGNATOR,
+	DESIGNATOR_LIST,
 	INITIALIZER,
 	INITIALIZER_LIST,
 	INIT_DECLARATOR_LIST,
+	DECLARATION_LIST,
 	INIT_DECLARATOR,
     DECLARATION_SPECIFIERS,
 	EXTERNAL_DECLARATION,
@@ -41,14 +52,20 @@ struct Node
 typedef struct Node Node;
 
 Node * newNode(Op op);
+Node * newAttrNode(Token t);
 void addChild(Node * p, Node * c);
 void match(Source * s,Tag t);
 
+//收集的信息
+struct Collection
+{
+	
+};
 
 
 
 #define FIRST(X) int first_##X(Source * s) //求某个符号的first集
-#define IN_FIRST(X) first_##X(s)
+#define IN_FIRST(X) (!eos(s) && first_##X(s) )
 #define CHECK_FIRST(X) \
     while(!IN_FIRST(X) && !eos(s)) {\
         printf("error in "#X"\n"); \
@@ -63,6 +80,18 @@ FIRST(X)
 #define P_(X) Node * X##_	(Node * first, Source * s)
 #define NODE(X) X(s)
 #define X(C)  match(s,C);
+#define error(f,...) \
+	{	\
+	printf(f" at :\n",##__VA_ARGS__); \
+		char * p = &s->code[s->cur]; \
+		while (*p != '\n' && *p != EOF) {\
+			printf("%c",*p); \
+			p++; \
+		} \
+		printf("\n");\
+	}	
+#define expected(X) \
+	error(#X);
 /*
  * 一下产生式来自c语言文档n1548
  */
@@ -92,7 +121,7 @@ P( expression					);
 P( constant_expression			);
 
 /* 声明 */
-P( declareation					);
+P( declaration					);
 P( declaration_specifiers		);
 P( init_declarator_list			);
 P( init_declarator				);
