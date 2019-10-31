@@ -126,7 +126,7 @@ P( postfix_expression)
 
 P(logical_AND_expression)
 {
-
+    CHECK_FIRST(logical_OR_expression);;
 }
 
 

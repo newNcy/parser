@@ -185,17 +185,27 @@ struct Collection
 #define IN_FIRST(X) (!eos(s) && first_##X(s) )
 static void println(Source * s)
 {
-	char * p = &s->code[s->cur]; 
+	char * p = &(s->code[s->cur]); 
+    int at = -1;
+    while (*p!='\n') {
+        -- p;
+        ++ at;
+    }
+    p++;
 	while (*p != '\n' && *p != EOF) {
 		printf("%c",*p); 
 		p++; 
 	} 
-	printf("\n");
+    printf("\n");
+    if(at >0) {
+        while (at --) printf(" ");
+    }
+	printf("^\n");
 }
 #define CHECK_FIRST(X) \
-	printf("first of "#X" at %s:%d\n",__FILE__,__LINE__); \
 	while(!eos(s) && !IN_FIRST(X)) {\
-		println(s); \
+	    printf("first of "#X" at %s:%d\n",__FILE__,__LINE__); \
+	    println(s); \
 		next(s); \
 	} \
 	if (eos(s)) return NULL;
@@ -209,7 +219,7 @@ static void println(Source * s)
 #define X(C)  match(s,C);
 #define error(f,...) \
 {	\
-	printf(f" at %s:%d:%d\n",__FILE__,__LINE__,##__VA_ARGS__); \
+	printf(f" at %s:%d\n",__FILE__,__LINE__,##__VA_ARGS__); \
 	println(s);\
 }	
 #define expected(X) \

@@ -8,7 +8,9 @@ void printNode(Node * n)
 	if (!n) return;
 	if (n->op > END) {
 		printf("%s ",nodeName[n->op - END - 1]);
-	}else {
+    }else if (n->op < 255) {
+        printf("%c ",n->op);
+    }else {
 		printf("%d ",n->op);
 	}
 	fflush(stdout);
@@ -16,6 +18,7 @@ void printNode(Node * n)
 void visit(Node * root)
 {
 	if (!root) return;
+    if(root->op < END) return;
 	printNode(root);
 	printf(" -> ");
 	Node * p = root->child;
@@ -23,7 +26,7 @@ void visit(Node * root)
 		printNode(p);
 		p = p->sbling;
 	}
-	printf("\n");
+	printf("\n\n");
 	p = root->child;
 	while (p) {
 		visit(p);

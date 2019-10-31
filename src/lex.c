@@ -155,7 +155,7 @@ int ** getTable()
 	
 	int s = 1;
 	for (int i = 0 ; i < sizeof(keyMap)/sizeof(MapEntry); i++) {
-		printf("%s : %d\n",keyMap[i].text, keyMap[i].tag);
+		//printf("%s : %d\n",keyMap[i].text, keyMap[i].tag);
 		char * text = keyMap[i].text;
 		int len = strlen(text);
 		int pre = 1;

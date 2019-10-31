@@ -28,9 +28,25 @@ void addChild(Node * p, Node * c)
 	n->sbling = c; 
 }
 
+void printTag(Tag t)
+{
+    if(t < 256) {
+        printf("'%c'",t);
+    }else {
+        printf("[%d]",t);
+    }
+}
+
 void match(Source * s,Tag t)
 {
-	if (look(s).tag != t) printf("需要%c\n",t);
+    Tag _t = look(s).tag;
+    if (_t != t) {
+        printf("expected ");
+        printTag(t);
+        printf("but get ");
+        printTag(_t);
+        printf("\n");
+    }
 	next(s);
 }
 /* 辅助过程 xx_*/
