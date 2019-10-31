@@ -18,7 +18,8 @@ Node * newAttrNode(Token t)
 void addChild(Node * p, Node * c)
 {
 	if (p->child == NULL) {
-		p->child = p;
+		p->child = c;
+		return;
 	}
 	Node * n = p->child;
 	while (n->sbling) {

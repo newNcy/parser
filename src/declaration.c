@@ -1,8 +1,21 @@
 #include "lex.h"
 #include "parser.h"
-#include <pthread.h>
 
 
+P(struct_declarator)
+{
+	CHECK_FIRST(struct_declarator);
+	Node * sd = newNode(STRUCT_DECLARATOR);
+	if (look(s).tag == ':') {
+		addChild(sd, newAttrNode(next(s)));
+		Node * ce = NODE(constant_expression);
+		if (!ce) {
+			expected(Constant_expression);
+		}
+		addChild(sd, ce);
+	}
+	return sd;
+}
 P(struct_declaration_list)
 {
 	CHECK_FIRST(struct_declarator);
@@ -40,6 +53,42 @@ P(struct_specifier)
 		addChild(ss, newAttrNode(next(s)));
 	}
     return  ss;
+}
+
+P(enumerator)
+{
+	CHECK_FIRST(enumerator);
+	Node * e = newNode(ENUMERATOR);
+	addChild(e, newAttrNode(next(s)));
+	if (look(s).tag == '=') {
+		addChild(e, newAttrNode(next(s)));
+		Node * ce = NODE(constant_expression);
+		if (!ce) {
+			expected(Constant_expression);
+		}
+		addChild(e, ce);
+	}
+	return e;
+}
+
+P(enumerator_list)
+{
+	CHECK_FIRST(enumerator_list);
+	Node * el = newNode(ENUMERATOR_LIST);
+	addChild(el ,el);
+	while (look(s).tag == ',') {
+		next(s);
+		Node * et = NODE(enumerator);
+		if (!et) {
+			return el;
+		}
+		Node * t = newNode(ENUMERATOR_LIST);
+		addChild(t, el);
+		addChild(t, newNode(',')); 
+		addChild(t, et);
+		el = t;
+	}
+	return el;
 }
 
 P(enum_specifier)
@@ -211,20 +260,65 @@ P(declaration_list)
 	return declaration_list_(dl, s);
 }
 
+P(parameter_declaration)
+{
+	CHECK_FIRST(parameter_declaration);
+	Node * pd = newNode(PARAMETER_DECLARATION);
+	addChild(pd, NODE(declaration_specifiers));
+
+}
+
+P(parameter_list)
+{
+	CHECK_FIRST(parameter_list);
+	Node * pl = newNode(PARAMETER_LIST);
+	addChild(pl, NODE(parameter_declaration));
+	while (look(s).tag == ',') {
+		next(s);
+		Node * pd = NODE(parameter_declaration);
+		if (!pd) {
+			expected(parameter_declaration);
+			return pl;
+		}
+
+		Node * t = newNode(PARAMETER_LIST);
+		addChild(t, pl);
+		addChild(t, newNode(','));
+		addChild(t, pd);
+		pl = t;
+	}
+	return pl;
+}
 P(direct_declarator)
 {
 	CHECK_FIRST(direct_declarator);
-	Node * dd = newNode(DIRECT_DECLARATOR);
+	Node * dd = newNode(DIRECT_ABSTRACT_DECLARATOR);
 	switch(look(s).tag) {
 		case Id:
 			addChild(dd, newAttrNode(next(s)));
+			dd->op = DIRECT_DECLARATOR;
 			break;
 		case '(':
 			addChild(dd, newNode(next(s).tag));
 			Node * dr  = NODE(declarator);
 			if (!dr) {
-				expected(declarator);
+				expected(Declarator);
 			}
+			addChild(dd, dr);
+			X(')');
+			addChild(dd, newNode(')'));
+			break;
+	}
+
+	while (look(s).tag == '(') {
+		Node * t = newNode(dd->op);
+		addChild(t, dd);
+		addChild(t,newAttrNode(next(s)));
+		addChild(t, NODE(parameter_list));
+		X(')');
+		addChild(t, newAttrNode(next(s)));
+
+		dd = t;
 	}
 	return dd;
 }
@@ -238,7 +332,7 @@ P(declarator)
 	}
 	Node * dd = NODE(direct_declarator);
 	if (!dd) {
-		error("expect direct dclarator\n");
+		expected(Direct_declarator);
 	}
 	addChild(dc, dd);
 	return dc;
@@ -271,11 +365,12 @@ P(declaration_specifiers)
 
 P_(init_declarator_list)
 {
+	if (eos(s) || look(s).tag != ',') return first;
+
 	Node * initl = newNode(INIT_DECLARATOR_LIST);
 	addChild(initl, first);
-	if (eos(s)) return initl;
-	
-	Node * ret = newNode(0);
+	addChild(initl, NODE(init_declarator));
+	return init_declarator_list_(initl, s);
 }
 
 P(initializer_list)
@@ -389,10 +484,13 @@ P(external_declaration)
 		addChild(initd, NODE(initializer)); 
 
 		Node * d = newNode(DECLARATION);
+		addChild(d, declspec);
 		Node * initl = newNode(INIT_DECLARATOR_LIST);
 		addChild(initl, initd);
 		addChild(d,init_declarator_list_(initl, s));
 		addChild(n, d);
+		X(';');
+		addChild(d, newNode(';'));
 	}else if (IN_FIRST(declaration_list) || IN_FIRST(compound_statement) ){//function
 		Node * funcd = newNode(FUNCTION_DEFINITION);
 		addChild(funcd, declspec);
@@ -417,22 +515,19 @@ P(external_declaration)
  * A    ->  aA'
  * A'   ->  aA' | 
  */
-P_(translation_unit)
-{
-	if (eos(s)) return first;
-	Node * n = newNode(TRANSLATE_UNIT);
-	addChild(n, first);
-	CHECK_FIRST(external_declaration);
-	addChild(n, NODE(external_declaration));
-	return translation_unit_(n, s);
-}
 
 P(translation_unit)
 {
-	if(eos(s)) return NULL;
-	Node * tu = newNode(TRANSLATE_UNIT);
 	CHECK_FIRST(external_declaration);
+	Node * tu = newNode(TRANSLATION_UNIT);
 	addChild(tu, NODE(external_declaration));
-	return translation_unit_(tu, s);
+
+	while (IN_FIRST(external_declaration)) {
+		Node * t = newNode(TRANSLATION_UNIT);
+		addChild(t, tu);
+		addChild(t, NODE(external_declaration));
+		tu = t;
+	}
+	return tu;
 }
 

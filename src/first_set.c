@@ -1,6 +1,7 @@
 #include "lex.h"
 #include "parser.h"
-#include <pthread.h>
+
+
 
 FIRST(primary_expression)
 {
@@ -46,7 +47,24 @@ FIRST(unary_expression)
 
 }
 
-
+FIRST(assignment_operator)
+{
+	switch(look(s).tag) {
+		case '=':
+		case Teq:
+		case Deq:
+		case Meq:
+		case Aeq:
+		case Seq:
+		case LsEq:
+		case RsEq:
+		case AndEq:
+		case OrEq:
+		case XorEq:
+			return 1;
+		default:return 0;
+	}
+}
 
 FIRST(labeled_statement)
 {
@@ -170,7 +188,7 @@ FIRST(conditional_expression)
 
 FIRST(assignment_expression)
 {
-	return IN_FIRST(conditional_expression) || IN_FIRST(unary_expression);
+	return IN_FIRST(conditional_expression); 
 }
 
 FIRST(expression) 
@@ -183,6 +201,19 @@ FIRST(constant_expression)
 	return IN_FIRST(conditional_expression);
 }
 
+FIRST(struct_declarator)
+{
+	return IN_FIRST(declarator) || look(s).tag == ';';
+}
+
+FIRST(enumerator)
+{
+	return look(s).tag == Id;
+}
+FIRST(enumerator_list)
+{
+	return IN_FIRST(enumerator);
+}
 FIRST(enum_specifier)
 {
     if (look(s).tag == Enum) return 1;
@@ -232,6 +263,16 @@ FIRST(storage_class_specifier)
     default:
         return 0;
     }
+}
+
+FIRST(parameter_declaration)
+{
+	return IN_FIRST(declaration_specifiers);
+}
+
+FIRST(parameter_list)
+{
+	return IN_FIRST(parameter_declaration);
 }
 
 FIRST(direct_declarator)

@@ -25,21 +25,34 @@ P( primary_expression )
     }
 }
 
+
+P(assignment_operator)
+{
+	CHECK_FIRST(assignment_operator);
+	Node * ao = newNode(ASSIGNMENT_OPERATOR);
+	addChild(ao, newAttrNode(next(s)));
+	return ao;
+}
+
 /*
  * assignment_expression    ->  conditional_expression
  *                          |   unary_expression assignment_operaNODEr assignment_expression
  */
 P(assignment_expression)
 {
-    if (look(s).tag == '(') {
-        next(s);
-        Node * first = newNode('(');
-        if (IN_FIRST(type_name)) { //cast_expression
-
-        }else { //unary_expression
-
-        }
-    }
+	CHECK_FIRST(assignment_expression);
+	Node * ae = newNode(ASSIGNMENT_EXPRESSION);
+	addChild(ae, NODE(conditional_expression));
+	if (IN_FIRST(assignment_operator)) {
+		addChild(ae, NODE(assignment_operator));
+		Node * as = NODE(assignment_operator);
+		if (!as) {
+			expected(Assignment_expression);
+			return ae;
+		}
+		addChild(ae, as);
+	}
+	return ae;
 }
 
 
@@ -177,4 +190,3 @@ P(constant_expression)
 	CHECK_FIRST(constant_expression);
 	return NODE(conditional_expression);
 }
-

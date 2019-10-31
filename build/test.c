@@ -1,13 +1,15 @@
 
 
-int foo(int a, int);
+int id = 0;
+
+int a (int a)
+{
+}
 int main ()
 {
-	int c = foo(1,2);
-	return c;
+	int a = 0;
+
+	return 0;
 }
 
 
-int foo(int a, int c)
-{
-}

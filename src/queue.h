@@ -1,7 +1,6 @@
 #pragma once
 
 #include "lex.h"
-
 struct QueueNode 
 {
 	long val;
@@ -9,8 +8,15 @@ struct QueueNode
 };
 typedef struct QueueNode QueueNode;
 
-QueueNode * queueNew(long v);
-void queuePush(QueueNode * q, long v);
-long queueFront(QueueNode * q);
+struct Queue
+{
+	int size;
+	QueueNode * _root;
+};
+typedef struct Queue Queue;
+
+Queue * queue();
+void queuePush(Queue* q, long v);
+long queueFront(Queue* q);
 
 

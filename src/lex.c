@@ -21,6 +21,10 @@ int eos(Source * s)
 {
 	return s->cur >= s->len;
 }
+int cur(Source * s)
+{
+	return s->code[s->cur];
+}
 
 void deleteSource(Source ** s)
 {
