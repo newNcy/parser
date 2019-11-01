@@ -26,10 +26,37 @@ typedef enum Tag
 	AndEq, OrEq, XorEq, // &= |= ^=
 	LsEq, RsEq, //>>= <<=
 
-	Eq, Neq, Ge, Le, And, Or, // == != >= <= && ||
+	Eq, Neq, Geq, Leq, And, Or, // == != >= <= && ||
 	END,
 	NoLook
 }Tag;
+
+static const char * tagName[] = 
+{
+	"Void ", "Char", "Short", "Int", "Long", "Float", "Double", "Unsigned", "Enum", "Struct",
+	"Sizeof",
+	"Id",
+
+	"If", "Else", "Switch", "Case", "Default", "While", "For", "Continue", "Break", "Return",
+	"Extern", "Static", "Const", "Inline", 
+
+	"ConstChar","ConstInt","ConstFloat","ConstLong","ConstDouble","ConstStr",
+	//括号
+	//符号
+	
+	//只有两个字符才要表示 单个字符直接返回
+	"Pto", // ->
+	"SPlus", "SSub",// ++ --
+	"Lsft", "Rsft", //<< >>
+	
+	"Aeq", "Seq", "Teq", "Deq", "Meq",  // += -= *= /= %= 
+	"AndEq", "OrEq", "XorEq", // &= |= ^=
+	"LsEq", "RsEq", //>>= <<=
+
+	"Eq", "Neq", "Geq", "Leq", "And", "Or", // == != >= <= && ||
+	"END"
+};
+
 struct MapEntry
 {
 	char text[32];

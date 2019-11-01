@@ -1,6 +1,10 @@
 #include "lex.h"
 #include "parser.h"
 
+P(type_name)
+{
+	CHECK_FIRST(type_name);
+}
 
 P(struct_declarator)
 {
@@ -156,7 +160,14 @@ P(pointer)
 
 P(block_item) 
 {
-	printf("block item\n");
+	CHECK_FIRST(block_item);
+	Node * ret = newNode(BLOCK_ITEM);
+	if (IN_FIRST(declaration)) {
+		addChild(ret, NODE(declaration));
+	}else if (IN_FIRST(statement)) {
+		addChild(ret, NODE(statement));
+	}
+	return ret;
 }
 
 P(block_item_list)
@@ -265,7 +276,8 @@ P(parameter_declaration)
 	CHECK_FIRST(parameter_declaration);
 	Node * pd = newNode(PARAMETER_DECLARATION);
 	addChild(pd, NODE(declaration_specifiers));
-
+	addChild(pd, NODE(declarator));
+	return pd;
 }
 
 P(parameter_list)
@@ -274,17 +286,10 @@ P(parameter_list)
 	Node * pl = newNode(PARAMETER_LIST);
 	addChild(pl, NODE(parameter_declaration));
 	while (look(s).tag == ',') {
-		next(s);
-		Node * pd = NODE(parameter_declaration);
-		if (!pd) {
-			expected(parameter_declaration);
-			return pl;
-		}
-
 		Node * t = newNode(PARAMETER_LIST);
 		addChild(t, pl);
-		addChild(t, newNode(','));
-		addChild(t, pd);
+		addChild(t, newAttrNode(next(s)));
+		addChild(t, NODE(parameter_declaration));
 		pl = t;
 	}
 	return pl;
@@ -314,7 +319,8 @@ P(direct_declarator)
 		Node * t = newNode(dd->op);
 		addChild(t, dd);
 		addChild(t,newAttrNode(next(s)));
-		addChild(t, NODE(parameter_list));
+		if (IN_FIRST(parameter_list))
+			addChild(t, NODE(parameter_list));
 		X(')');
 		addChild(t, newAttrNode(next(s)));
 
@@ -331,9 +337,6 @@ P(declarator)
 		addChild(dc, NODE(pointer));
 	}
 	Node * dd = NODE(direct_declarator);
-	if (!dd) {
-		expected(Direct_declarator);
-	}
 	addChild(dc, dd);
 	return dc;
 
@@ -491,7 +494,7 @@ P(external_declaration)
 		addChild(n, d);
 		X(';');
 		addChild(d, newNode(';'));
-	}else if (IN_FIRST(declaration_list) || IN_FIRST(compound_statement) ){//function
+	}else if (IN_FIRST(compound_statement) ){//function
 		Node * funcd = newNode(FUNCTION_DEFINITION);
 		addChild(funcd, declspec);
 		addChild(funcd, dr);

@@ -127,6 +127,7 @@ Token parseNum(Source * s)
 		s->stringPool.pool[s->stringPool.use++] = c[cur++];
 	}else {
 		s->cur = cur;
+		s->stringPool.pool[s->stringPool.use++] = 0; 
 		return t;
 	}
 
@@ -142,6 +143,7 @@ Token parseNum(Source * s)
 		s->stringPool.pool[s->stringPool.use++] = c[cur++];
 	}
 	s->cur = cur;
+	s->stringPool.pool[s->stringPool.use++] = 0; 
 	return t;
 }
 
@@ -211,6 +213,7 @@ Token parseIdOrKeyword(Source * s)
 	if (state < Void)
 		state = Id;
 	t.tag = state;
+	s->stringPool.pool[s->stringPool.use++] = 0; 
 	return t;
 }
 
@@ -341,8 +344,8 @@ Token next(Source * s)
 	
 	OP2('=', '=', Eq)
 	OP2('!', '=', Neq)
-	OP2('<', '=', Le)
-	OP2('>', '=', Ge)
+	OP2('<', '=', Leq)
+	OP2('>', '=', Geq)
 	OP2('&', '&', And)
 	OP2('|', '|', Or)	
 

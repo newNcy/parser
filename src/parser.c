@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "lex.h"
 
 Node * newNode(Op op)
 {
@@ -33,11 +34,26 @@ void printTag(Tag t)
     if(t < 256) {
         printf("'%c'",t);
     }else {
-        printf("[%d]",t);
+        printf("[%s]",tagName[t - Void]);
     }
 }
-
-void match(Source * s,Tag t)
+void printNode(Source * s, Node * n)
+{
+	if (!n) return;
+	if (n->op > END) {
+		printf("%s ",nodeName[n->op - END - 1]);
+    }else if (n->op < 255) {
+        printf("%c ",n->op);
+    }else {
+		printTag(n->op);
+		Tag _t = n->op;
+		if (_t == Id) {
+			printf("(%s)",s->stringPool.pool + n->attr);
+		}
+	}
+	fflush(stdout);
+}
+int match(Source * s,Tag t)
 {
     Tag _t = look(s).tag;
     if (_t != t) {
@@ -45,9 +61,11 @@ void match(Source * s,Tag t)
         printTag(t);
         printf("but get ");
         printTag(_t);
-        printf("\n");
+        printf(":\n");
+		println(s);
+		return 0;
     }
-	next(s);
+	return 1;
 }
 /* 辅助过程 xx_*/
 

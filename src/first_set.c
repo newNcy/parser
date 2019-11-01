@@ -26,6 +26,23 @@ FIRST(postfix_expression)
     return IN_FIRST(primary_expression);
 }
 
+
+FIRST(unary_operator)
+{
+	switch(look(s).tag) {
+		case '&':
+		case '*':
+		case '+':
+		case '-':
+		case '~':
+		case '!':
+			return 1;
+			break;
+		default:
+			return 0;
+	}
+}
+
 FIRST(unary_expression)
 {
 	switch(look(s).tag) {
@@ -66,6 +83,12 @@ FIRST(assignment_operator)
 	}
 }
 
+
+FIRST(argument_expression_list)
+{
+	return IN_FIRST(assignment_expression);
+}
+
 FIRST(labeled_statement)
 {
 	return look(s).tag == Case || look(s).tag == Default;
@@ -75,7 +98,7 @@ FIRST(expression_statement)
 	return IN_FIRST(expression) || look(s).tag == ';';
 }
 
-FIRST(selection_statemen)
+FIRST(selection_statement)
 {
 	return look(s).tag == If || look(s).tag == Switch;
 }
@@ -95,7 +118,7 @@ FIRST(statement)
 	return IN_FIRST(labeled_statement) 
 		|| IN_FIRST(compound_statement)
 		|| IN_FIRST(expression_statement)
-		|| IN_FIRST(selection_statemen)
+		|| IN_FIRST(selection_statement)
 		|| IN_FIRST(iteration_statement)
 		|| IN_FIRST(jump_statement);
 }

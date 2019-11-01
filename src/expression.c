@@ -7,6 +7,7 @@
 P( primary_expression )
 {
 	CHECK_FIRST(primary_expression);
+	Node * ret = newNode(PRIMARY_EXPRESSION);
     switch(look(s).tag) {
     case Id:
     case ConstChar:
@@ -15,14 +16,16 @@ P( primary_expression )
     case ConstLong:
     case ConstDouble:
     case ConstStr:
-        next(s);
+		addChild(ret, newAttrNode(next(s)));	
         break;
     case '(':
-        next(s);
-        NODE( expression );
+		addChild(ret, newAttrNode(next(s)));	
+        addChild(ret, NODE( expression ));
         X(')');
+		addChild(ret, newAttrNode(next(s)));	
         break;
     }
+	return ret;
 }
 
 
@@ -45,112 +48,141 @@ P(assignment_expression)
 	addChild(ae, NODE(conditional_expression));
 	if (IN_FIRST(assignment_operator)) {
 		addChild(ae, NODE(assignment_operator));
-		Node * as = NODE(assignment_operator);
-		if (!as) {
-			expected(Assignment_expression);
-			return ae;
-		}
-		addChild(ae, as);
+		addChild(ae, NODE(assignment_expression));
 	}
 	return ae;
 }
 
 
-P_(argument_expression_list)
-{
-    if (look(s).tag == ',') {
-        Node * expr = newNode(ARGUMENT_EXPRESSION_LIST);
-        addChild(expr, first);
-        addChild(expr, newNode(','));
-        addChild(expr, NODE(assignment_expression));
-        return expression_(expr, s);
-    }else {
-        return first;
-    }
-}
-
-P(argument_expression_list)
-{
-}
+LEFT_RECURSIVE(argument_expression_list, assignment_expression, ARGUMENT_EXPRESSION_LIST, ',');
 
 
-P_(postfix_expression)
-{
-	if (eos(s)) return first;
-    
-	Node * post_expr = newNode(POSTFIX_EXPRESSION);
-    addChild(post_expr, first);
 
-    switch(look(s).tag) {
-    case '[':
-        addChild(post_expr, newNode(next(s).tag));
-        addChild(post_expr, NODE(expression));
-        X(']');
-        addChild(post_expr, newNode(next(s).tag));
-        return postfix_expression_(post_expr, s);
-    case '(':
-        next(s);
-        addChild(post_expr, newNode('('));
-        if (look(s).tag != ')') {
-            addChild(post_expr, NODE(argument_expression_list));
-        }
-        X(')');
-        addChild(post_expr, newNode(')'));
-        return postfix_expression_(post_expr, s);
-    case '.':
-    case Pto:
-        addChild(post_expr, newNode(look(s).tag));
-        next(s);
-        if (look(s).tag != Id) {
-            printf("error\n");
-        }
-        X(Id);
-        break;
-    case SPlus:
-    case SSub:
-        next(s);
-    }
-	return post_expr;
-}
+
+
 P( postfix_expression) 
 {
 	CHECK_FIRST(postfix_expression);
-	if (eos(s)) return NULL;
 	Node * pe = newNode(POSTFIX_EXPRESSION);
 	addChild(pe , NODE(primary_expression));
-    return postfix_expression_(pe, s);
-}
 
-
-
-
-P(logical_AND_expression)
-{
-    CHECK_FIRST(logical_OR_expression);;
-}
-
-
-
-P_(logical_OR_expression)
-{
-	if (eos(s) || look(s).tag != Or) return first;
-	Node * lor = newNode(LOGICAL_OR_EXPRESSION);
-	addChild(lor, first);
-	addChild(lor, newNode(next(s).tag));
-	if (!IN_FIRST(logical_AND_expression)) {
-		printf("error want exp\n");
+	int set[] = {'[', '(', '.', Pto, SPlus, SSub};
+	while (INSET(set)) {
+		Node * t = newNode(POSTFIX_EXPRESSION);
+		addChild(t, pe);
+		switch (look(s).tag) {
+			case '[':
+				addChild(t, newAttrNode(next(s)));
+				addChild(t, NODE(expression));
+				X(']');
+				addChild(t, newAttrNode(next(s)));
+				break;
+			case '(':
+				addChild(t, newAttrNode(next(s)));
+				if (IN_FIRST(argument_expression_list)) {
+					addChild(t, NODE(argument_expression_list));
+				}
+				X(')');
+				addChild(t, newAttrNode(next(s)));
+				break;
+			case '.':
+			case Pto:
+				addChild(t, newAttrNode(next(s)));
+				if (look(s).tag != Id) {
+					expected(Id);
+				}
+				addChild(t, newAttrNode(next(s)));
+				break;
+			case SPlus:
+			case SSub:
+				addChild(t, newAttrNode(next(s)));
+				break;
+		}
+		pe = t;
 	}
-	addChild(lor, NODE(logical_AND_expression));
-	return logical_OR_expression_(lor,s);
+	return pe;
 }
 
-P(logical_OR_expression)
+P(unary_expression)
 {
-	CHECK_FIRST(logical_OR_expression);
-	Node * lor = newNode(LOGICAL_OR_EXPRESSION);
-	addChild(lor, NODE(logical_AND_expression));
-	return logical_OR_expression_(lor, s);
+	CHECK_FIRST(unary_expression);
+	Node * ret = newNode(UNARY_EXPRESSION);
+	if (IN_FIRST(postfix_expression)) {
+		addChild(ret, NODE(postfix_expression));
+	}else if (IN_FIRST(unary_operator)) {
+		Node * uo = newNode(UNARY_OPERATOR);
+		addChild(uo, newAttrNode(next(s)));
+		addChild(ret, uo);
+		addChild(ret, NODE(unary_expression));
+	}else {
+		int isSizeof = 0;
+		switch(look(s).tag) {
+			case Sizeof:
+				isSizeof = 1;
+			case SPlus:
+			case SSub:
+				addChild(ret, newAttrNode(next(s)));
+				if (isSizeof) {
+					if(look(s).tag == '(') {
+						addChild(ret, newAttrNode(next(s)));
+						addChild(ret, NODE(type_name));
+						X(')');
+						addChild(ret, newAttrNode(next(s)));
+					}else {
+						addChild(ret, NODE(unary_expression));
+					}
+				}
+				break;
+		}
+	}
 }
+
+P(cast_expression)
+{
+	CHECK_FIRST(cast_expression);
+	Node * ret = newNode(CAST_EXPRESSION);
+	if (look(s).tag == '(') {
+		addChild(ret, newAttrNode(next(s)));
+		if (IN_FIRST(type_name)) {
+			addChild(ret,NODE(type_name));
+			X(')');
+			addChild(ret, newAttrNode(next(s)));
+			if (!eos(s)) addChild(ret, NODE(cast_expression));
+		}else if (IN_FIRST(expression)) {
+			//推导树最底部构建,算是变相规约
+			//primary_expression
+			Node * pri = newNode(PRIMARY_EXPRESSION);
+			addChild(ret, newAttrNode(next(s)));
+			addChild(pri, NODE(expression));
+			X(')');
+			addChild(ret, newAttrNode(next(s)));
+
+			//postfix_expression
+			Node * post = newNode(POSTFIX_EXPRESSION);
+			addChild(post, pri);
+			//unary_expression
+			Node * unary = newNode(UNARY_EXPRESSION);
+			addChild(unary, post);
+
+			addChild(ret, unary);
+
+		}
+	}else {
+		addChild(ret, NODE(unary_expression));
+	}
+	return ret;
+}
+
+LEFT_RECURSIVE(multiplicative_expression, cast_expression, MULTIPLICATIVE_EXPRESSION, '*', '/','%');
+LEFT_RECURSIVE(additive_expression, multiplicative_expression, ADDITIVE_EXPRESSION, '+', '-');
+LEFT_RECURSIVE(shift_expression, additive_expression, SHIFT_EXPRESSION, Lsft, Rsft);
+LEFT_RECURSIVE(relational_expression, shift_expression, RELATIONAL_EXPRESSION, '<','>',Leq,Geq);
+LEFT_RECURSIVE(equality_expression, relational_expression, EQUALITY_EXPRESSION, Eq, Neq);
+LEFT_RECURSIVE(AND_expression,equality_expression, AND_EXPRESSION, '&');
+LEFT_RECURSIVE(exclusive_OR_expression, AND_expression, EXCLUSIVE_OR_EXPRESSION, '^');
+LEFT_RECURSIVE(inclusive_OR_expression, exclusive_OR_expression, INCLUSIVE_OR_EXPRESSION, '|');
+LEFT_RECURSIVE(logical_AND_expression, inclusive_OR_expression, LOGICAL_AND_EXPRESSION, And);
+LEFT_RECURSIVE(logical_OR_expression, logical_AND_expression, LOGICAL_OR_EXPRESSION, Or);
 
 P(conditional_expression)
 {
@@ -167,23 +199,7 @@ P(conditional_expression)
 	return cexp;
 }
 
-P_(expression) 
-{
-	if (eos(s) || look(s).tag != ',') return first;
-	Node * expr = newNode(EXPRESSION);
-	addChild(expr, first);
-	addChild(expr, newNode(next(s).tag));
-	addChild(expr, NODE(assignment_expression));
-	return expression_(expr, s);
-}
-
-P(expression)
-{
-	CHECK_FIRST(expression);
-	Node * exp = newNode(EXPRESSION);
-	addChild(exp, NODE(assignment_expression));
-	return expression_(exp, s);
-}
+LEFT_RECURSIVE(expression, assignment_expression, EXPRESSION, ',');
 
 P(constant_expression)
 {

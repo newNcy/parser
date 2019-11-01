@@ -3,36 +3,26 @@
 
 
 
-void printNode(Node * n)
-{
-	if (!n) return;
-	if (n->op > END) {
-		printf("%s ",nodeName[n->op - END - 1]);
-    }else if (n->op < 255) {
-        printf("%c ",n->op);
-    }else {
-		printf("%d ",n->op);
-	}
-	fflush(stdout);
-}
-void visit(Node * root)
+
+void visit(Source * s, Node * root)
 {
 	if (!root) return;
     if(root->op < END) return;
-	printNode(root);
-	printf(" -> ");
+	//printNode(s,root);
+	//printf(" -> ");
 	Node * p = root->child;
 	while (p) {
-		printNode(p);
+		printNode(s, p);
 		p = p->sbling;
 	}
-	printf("\n\n");
+	//printf("\n\n");
 	p = root->child;
 	while (p) {
-		visit(p);
+		visit(s, p);
 		p = p->sbling;
 	}
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -41,6 +31,6 @@ int main(int argc, char *argv[])
 	Node * ast = translation_unit(test);
 
 	//后续遍历
-	visit(ast);
+	visit(test, ast);
 	return 0;
 }

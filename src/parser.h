@@ -171,7 +171,9 @@ typedef struct Node Node;
 Node * newNode(Op op);
 Node * newAttrNode(Token t);
 void addChild(Node * p, Node * c);
-void match(Source * s,Tag t);
+void printTag(Tag t);
+void printNode(Source * s, Node * n);
+int match(Source * s,Tag t);
 
 //收集的信息
 struct Collection
@@ -192,6 +194,7 @@ static void println(Source * s)
         ++ at;
     }
     p++;
+	if (s->look.tag != NoLook) at --;
 	while (*p != '\n' && *p != EOF) {
 		printf("%c",*p); 
 		p++; 
@@ -202,6 +205,22 @@ static void println(Source * s)
     }
 	printf("^\n");
 }
+
+static int inset(int c, int set[], int len)
+{
+	printf("test %c in ",c);
+	for (int i = 0; i < len; i++) {
+		printTag(set[i]);
+	}
+	printf("\n");
+	for (int i = 0; i < len; i++) {
+		if (c == set[i]) return 1;
+	}
+	fflush(stdout);
+	return 0;
+}
+
+#define INSET(X) inset(look(s).tag, X,sizeof(X)/sizeof(int) )
 #define CHECK_FIRST(X) \
 	while(!eos(s) && !IN_FIRST(X)) {\
 	    printf("first of "#X" at %s:%d\n",__FILE__,__LINE__); \
@@ -216,14 +235,43 @@ static void println(Source * s)
 
 #define P_(X) Node * X##_	(Node * first, Source * s)
 #define NODE(X) X(s)
-#define X(C)  match(s,C);
 #define error(f,...) \
 {	\
-	printf(f" at %s:%d\n",__FILE__,__LINE__,##__VA_ARGS__); \
+	printf("error: "f" at %s:%d\n",__FILE__,__LINE__,##__VA_ARGS__); \
 	println(s);\
 }	
+#define X(C) match(s,C);
 #define expected(X) \
 	error(#X);
+
+//左递归
+//S -> A | SaA | SbA | ScA的统一定义
+//SN为S标号 AN为A标号
+// S ->AS'
+// S'->aAS'| bAS' | cAS' |空
+// ... = {a, b, }
+#define LEFT_RECURSIVE(S, A, SN, ...)		\
+P(S)										\
+{											\
+	CHECK_FIRST(S);							\
+	/* A*/									\
+	Node * ret = newNode(SN);				\
+	addChild(ret, NODE(A));					\
+											\
+	/* S' */								\
+	int _s[] = {__VA_ARGS__};				\
+	while (INSET(_s)){						\
+		Node * t = newNode(SN);				\
+		addChild(t, ret);					\
+		/* a */								\
+		addChild(t, newAttrNode(next(s)));	\
+		/* A */								\
+		addChild(t, NODE(A));				\
+		ret = t;							\
+	}										\
+	return ret;								\
+}
+
 /*
  * 一下产生式来自c语言文档n1548
  */
