@@ -223,10 +223,21 @@ FIRST(constant_expression)
 {
 	return IN_FIRST(conditional_expression);
 }
-
 FIRST(struct_declarator)
 {
-	return IN_FIRST(declarator) || look(s).tag == ';';
+	return IN_FIRST(declarator);
+}
+FIRST(struct_declaration)
+{
+	return IN_FIRST(specifier_qualifier_list);
+}
+FIRST(struct_declarator_list)
+{
+	return IN_FIRST(struct_declarator);
+}
+FIRST(struct_declaration_list)
+{
+	return IN_FIRST(struct_declaration);
 }
 
 FIRST(enumerator)

@@ -40,12 +40,14 @@ enum Op{
 	STRUCT_DECLARATION			,
 	SPECIFIER_QUALIFIER_LIST		,
 	STRUCT_DECLARATOR			,
+	STRUCT_DECLARATOR_LIST,
 	ENUM_SPECIFIER				,
 	ENUMERATOR_LIST				,
 	ENUMERATOR					,
 	TYPE_QUALIFIER				,
 	FUNCTION_SPECIFIER			,
 	DECLARATOR					,
+	ABSTRACT_DECLARATOR			,
 	DIRECT_DECLARATOR			,
 	DIRECT_ABSTRACT_DECLARATOR	,
 	POINTER						,
@@ -117,12 +119,14 @@ const static char * nodeName[] =
 	"STRUCT_DECLARATION",
 	"SPECIFIER_QUALIFIER_LIST",
 	"STRUCT_DECLARATOR",
+	"STRUCT_DECLARATOR_LIST",	
 	"ENUM_SPECIFIER",
 	"ENUMERATOR_LIST",
 	"ENUMERATOR",
 	"TYPE_QUALIFIER",
 	"FUNCTION_SPECIFIER",
 	"DECLARATOR",
+	"ABSTRACT_DECLARATOR"			,
 	"DIRECT_DECLARATOR",
 	"DIRECT_ABSTRACT_DECLARATOR",
 	"POINTER",
@@ -176,10 +180,11 @@ void printNode(Source * s, Node * n);
 int match(Source * s,Tag t);
 
 //收集的信息
-struct Collection
+struct Env 
 {
 
 };
+typedef struct Env Env; 
 
 
 
@@ -208,11 +213,6 @@ static void println(Source * s)
 
 static int inset(int c, int set[], int len)
 {
-	printf("test %c in ",c);
-	for (int i = 0; i < len; i++) {
-		printTag(set[i]);
-	}
-	printf("\n");
 	for (int i = 0; i < len; i++) {
 		if (c == set[i]) return 1;
 	}
@@ -222,19 +222,17 @@ static int inset(int c, int set[], int len)
 
 #define INSET(X) inset(look(s).tag, X,sizeof(X)/sizeof(int) )
 #define CHECK_FIRST(X) \
-	while(!eos(s) && !IN_FIRST(X)) {\
+	if (eos(s) || !IN_FIRST(X)) {\
 	    printf("first of "#X" at %s:%d\n",__FILE__,__LINE__); \
 	    println(s); \
-		next(s); \
 	} \
-	if (eos(s)) return NULL;
 
 #define P(X) \
-	Node * X(Source * s);\
+	Node * X(Env * env, Source * s);\
 	FIRST(X)
 
-#define P_(X) Node * X##_	(Node * first, Source * s)
-#define NODE(X) X(s)
+#define P_(X) Node * X##_	(Env * env, Node * first, Source * s)
+#define NODE(X) X(env, s)
 #define error(f,...) \
 {	\
 	printf("error: "f" at %s:%d\n",__FILE__,__LINE__,##__VA_ARGS__); \
@@ -250,26 +248,27 @@ static int inset(int c, int set[], int len)
 // S ->AS'
 // S'->aAS'| bAS' | cAS' |空
 // ... = {a, b, }
-#define LEFT_RECURSIVE(S, A, SN, ...)		\
-P(S)										\
-{											\
-	CHECK_FIRST(S);							\
-	/* A*/									\
-	Node * ret = newNode(SN);				\
-	addChild(ret, NODE(A));					\
-											\
-	/* S' */								\
-	int _s[] = {__VA_ARGS__};				\
-	while (INSET(_s)){						\
-		Node * t = newNode(SN);				\
-		addChild(t, ret);					\
-		/* a */								\
-		addChild(t, newAttrNode(next(s)));	\
-		/* A */								\
-		addChild(t, NODE(A));				\
-		ret = t;							\
-	}										\
-	return ret;								\
+#define LEFT_RECURSIVE(S, A, SN, ...)								\
+P(S)																\
+{																	\
+	CHECK_FIRST(S);													\
+	/* A*/															\
+	Node * ret = newNode(SN);										\
+	addChild(ret, NODE(A));											\
+																	\
+	/* S' */														\
+	int _s[] = {__VA_ARGS__};										\
+	while (INSET(_s) || (!sizeof(_s) && IN_FIRST(A))){				\
+		Node * t = newNode(SN);										\
+		addChild(t, ret);											\
+		/* _s */													\
+		if (sizeof(_s))												\
+		addChild(t, newAttrNode(next(s)));							\
+		/* A */														\
+		addChild(t, NODE(A));										\
+		ret = t;													\
+	}																\
+	return ret;														\
 }
 
 /*
@@ -312,6 +311,7 @@ P( struct_declaration_list		);
 P( struct_declaration			);
 P( specifier_qualifier_list		);
 P( struct_declarator			);
+P( struct_declarator_list		);
 P( enum_specifier				);
 P( enumerator_list				);
 P( enumerator					);
@@ -353,7 +353,7 @@ P( declaration_list				);
 
 
 #undef P
-#define P(X) Node * X(Source * s)
+#define P(X) Node * X(Env * env, Source * s)
 
 
 P_(expression);

@@ -2,7 +2,7 @@
 project(n)
 
 
-include_directories(src)
+include_directories(src src/util)
 
 add_definitions(-g -std=c99)
 
@@ -10,7 +10,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 #target
 add_executable(main 
-	src/queue.c
 	src/lex.c
     src/first_set.c
     src/expression.c

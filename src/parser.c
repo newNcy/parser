@@ -47,7 +47,7 @@ void printNode(Source * s, Node * n)
     }else {
 		printTag(n->op);
 		Tag _t = n->op;
-		if (_t == Id) {
+		if (_t == Id || (ConstChar <= _t && _t <= ConstStr)) {
 			printf("(%s)",s->stringPool.pool + n->attr);
 		}
 	}

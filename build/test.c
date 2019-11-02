@@ -1,8 +1,4 @@
 
 
+int a = 1*3+4;
 
-
-int main ()
-{
-	return foo(1, 2);
-}
