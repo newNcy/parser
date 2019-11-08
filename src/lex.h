@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "new.h"
 
 typedef enum Tag
 {
@@ -123,18 +124,6 @@ struct _Source
 };
 
 typedef struct _Source Source;
-
-static void * new(unsigned int size)
-{
-	static unsigned int sum = 0;
-	void * ret = malloc(size);
-	memset(ret, 0, size);
-	if (ret) {
-		sum += size;
-		return ret;
-	}
-	return NULL;
-}
 
 void deleteSource(Source ** s);
 Source * newSource(unsigned int size);

@@ -378,7 +378,20 @@ P(initializer_list)
 	if (IN_FIRST(designation)) {
 		addChild(initerl, NODE(designation));
 	}
+	addChild(initerl, NODE(initializer));
+	
+	while (look(s).tag == ',') {
+		Node * t = newNode(INITIALIZER_LIST);
+		addChild(t, initerl);
+		addChild(t, newAttrNode(next(s)));
+		if (IN_FIRST(designation)) {
+			addChild(t, NODE(designation));
+		}
+		addChild(t, NODE(initializer));
 
+		initerl = t;
+	}
+	return initerl;
 }
 
 P(designator)
@@ -386,20 +399,22 @@ P(designator)
 	Node * dt = newNode(DESIGNATOR);
 	switch(look(s).tag) {
 		case '[':
-			addChild(dt, newNode(next(s).tag));
+			addChild(dt, newAttrNode(next(s))); 
 			addChild(dt, NODE(constant_expression));
 			X(']');
 			addChild(dt, newAttrNode(next(s)));
 			break;
 		case '.':
-			addChild(dt, newNode(next(s).tag));
+			addChild(dt, newAttrNode(next(s))); 
 			if (look(s).tag != Id) {
 				expected(Id);
 			}
 			addChild(dt, newAttrNode(next(s)));
-
 			break;
+		default:
+			return NULL;
 	}
+			return NULL;
 }
 
 LEFT_RECURSIVE(designator_list, designator, DESIGNATOR_LIST);
@@ -418,7 +433,7 @@ P(initializer)
 	CHECK_FIRST(initializer);
 	Node * initer = newNode(INITIALIZER);
 	if (look(s).tag == '{' ) {
-		addChild(initer, newNode(next(s).tag));
+		addChild(initer, newAttrNode(next(s))); 
 		addChild(initer, NODE(initializer_list));
 		match(s,'}');
 		addChild(initer, newNode('}'));
@@ -438,7 +453,7 @@ P(external_declaration)
 	if (look(s).tag == ';') { //external_declaration -> declaration (init_declarator_list) ;
 		Node * d = newNode(DECLARATION);
 		addChild(d, declspec);
-		addChild(d, newNode(next(s).tag));
+		addChild(d, newAttrNode(next(s))); 
 		addChild(n , d);
 		return n;
 	}
@@ -485,14 +500,6 @@ P(external_declaration)
 	return n;
 }
 
-/*
- * 改写产生式
- * A    ->  Aa
- *      |   a
- * =>
- * A    ->  aA'
- * A'   ->  aA' | 
- */
 
 P(translation_unit)
 {

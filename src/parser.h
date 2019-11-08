@@ -1,5 +1,6 @@
 #pragma once
 #include "lex.h"
+#include "env.h"
 #include <stdarg.h>
 
 
@@ -179,12 +180,6 @@ void printTag(Tag t);
 void printNode(Source * s, Node * n);
 int match(Source * s,Tag t);
 
-//收集的信息
-struct Env 
-{
-
-};
-typedef struct Env Env; 
 
 
 
