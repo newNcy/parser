@@ -1,25 +1,30 @@
 #include <stdio.h>
+#include "lex.h"
 #include "parser.h"
+#include "util/vector.h"
 
 
 
-
-void visit(Source * s, Node * root)
+void visit(Source * s, Node * root, int tab)
 {
 	if (!root) return;
-    if(root->op < END) return;
-	printNode(s,root);
-	printf(" -> ");
+	//printf("|");
+
+	if (root > 10) {
+		for (int i = 0; i < tab; i++) printf(" ");
+		printNode(s,root);
+		printf("\n");
+	}
+	if (root->child) {
+		tab ++;
+	}
 	Node * p = root->child;
 	while (p) {
-		printNode(s, p);
+		visit(s, p, tab);
 		p = p->sbling;
 	}
-	printf("\n");
-	p = root->child;
-	while (p) {
-		visit(s, p);
-		p = p->sbling;
+	if (root->child) {
+		tab --;
 	}
 }
 
@@ -38,16 +43,25 @@ void exec(Source * s, Node * root)
 }
 
 
+void printVector(Vector * vector)
+{
+	if (!vector) return;
+	for (int i = 0 ; i < vector->size; i ++) {
+		printf("%d ",vectorAt(vector, i));
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int _s[] = {};
 	printf("%d\n", sizeof(_s));
 	Source * test = sourceFromFile("test.c");
-	Env env;
+	Env * env = new(Env, NULL);
 	if (!test) return -1;
-	Node * ast = translation_unit(&env, test);
+	Node * ast = translation_unit(env, test);
 
 	//后续遍历
-	visit(test, ast);
+	visit(test, ast,0);
+
 	return 0;
 }

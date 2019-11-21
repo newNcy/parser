@@ -7,6 +7,14 @@
 /* 语法分析 构建抽象语法树 */
 enum Op{
 	UNKOWN = END,
+
+	FUNC_BODY					,
+	FUNC_NAME					,
+	FUNC_CALL					,
+	ARRAY_OFFSET				,
+	ARRAYTYPE,
+	POINTERTYPE,
+
 	PRIMARY_EXPRESSION			,
 	POSTFIX_EXPRESSION			,
 	ARGUMENT_EXPRESSION_LIST		,
@@ -86,6 +94,12 @@ enum Op{
 
 const static char * nodeName[] = 
 {
+	"FUNC_BODY",
+	"FUNC_NAME",
+	"FUNC_CALL",
+	"ARRAY_OFFSET",
+	"ATTAY",
+	"POINTER",
 	"PRIMARY_EXPRESSION",
 	"POSTFIX_EXPRESSION",
 	"ARGUMENT_EXPRESSION_LIST",
@@ -169,6 +183,7 @@ struct Node
 	long attr;
 	struct Node * child;
 	struct Node * sbling;
+	Type * type;
 };
 
 typedef struct Node Node;
@@ -182,9 +197,93 @@ int match(Source * s,Tag t);
 
 
 
-
 #define FIRST(X) int first_##X(Source * s) //求某个符号的first集
+FIRST( primary_expression			);
+FIRST( postfix_expression			);
+FIRST( argument_expression_list		);
+FIRST( unary_expression				);
+FIRST( unary_operator				);
+FIRST( cast_expression				);
+FIRST( multiplicative_expression	);
+FIRST( additive_expression			);
+FIRST( shift_expression				);
+FIRST( relational_expression		);
+FIRST( equality_expression			);
+FIRST( AND_expression				);
+FIRST( exclusive_OR_expression		);
+FIRST( inclusive_OR_expression		);
+FIRST( logical_AND_expression		);
+FIRST( logical_OR_expression		);
+FIRST( conditional_expression		);
+FIRST( assignment_expression		);
+FIRST( assignment_operator			);
+FIRST( expression					);
+FIRST( constant_expression			);
+
+/* 声明 */
+FIRST( declaration					);
+FIRST( declaration_specifiers		);
+FIRST( init_declarator_list			);
+FIRST( init_declarator				);
+FIRST( storage_class_specifier      );
+FIRST( type_specifier				);
+FIRST( struct_specifier				);
+FIRST( struct_declaration_list		);
+FIRST( struct_declaration			);
+FIRST( specifier_qualifier_list		);
+FIRST( struct_declarator			);
+FIRST( struct_declarator_list		);
+FIRST( enum_specifier				);
+FIRST( enumerator_list				);
+FIRST( enumerator					);
+FIRST( type_qualifier				);
+FIRST( function_specifier			);
+FIRST( declarator					);
+FIRST( direct_declarator			);
+FIRST( pointer						);
+FIRST( type_qualifier_list			);
+FIRST( parameter_type_list			);
+FIRST( parameter_list				);
+FIRST( parameter_declaration		);
+FIRST( identifier_list				);
+FIRST( type_name					);
+FIRST( initializer					);
+FIRST( initializer_list				);
+FIRST( designation					);
+FIRST( designator_list				);
+FIRST( designator					);
+
+/* 语句 */
+FIRST( statement					);
+FIRST( labeled_statement			);
+FIRST( compound_statement			);
+FIRST( compound_statement			);
+FIRST( block_item_list				);
+FIRST( block_item					);
+FIRST( expression_statement			);
+FIRST( selection_statement			);
+FIRST( iteration_statement			);
+FIRST( jump_statement				);
+
+/* 定义 */
+
+FIRST( translation_unit				);
+FIRST( external_declaration			);
+FIRST( function_definition			);
+FIRST( declaration_list				);
+
+
 #define IN_FIRST(X) (!eos(s) && first_##X(s) )
+
+
+
+///////////////////////////////////////////////
+Type * declaration_specifiers(Env * env, Source * s);
+Type * type_qualifier(Env * env, Source * s);
+Type * type_specifier(Env * env, Source * s);
+Node * direct_declarator(Env * env, Source * s);
+/////////////////////////////////////////////////////
+
 static void println(Source * s)
 {
 	char * p = &(s->code[s->cur]); 
@@ -222,16 +321,12 @@ static int inset(int c, int set[], int len)
 	    println(s); \
 	} \
 
-#define P(X) \
-	Node * X(Env * env, Source * s);\
-	FIRST(X)
 
 #define P_(X) Node * X##_	(Env * env, Node * first, Source * s)
 #define NODE(X) X(env, s)
 #define error(f,...) \
 {	\
 	printf("error: "f" at %s:%d\n",__FILE__,__LINE__,##__VA_ARGS__); \
-	println(s);\
 }	
 #define X(C) match(s,C);
 #define expected(X) \
@@ -244,111 +339,36 @@ static int inset(int c, int set[], int len)
 // S'->aAS'| bAS' | cAS' |空
 // ... = {a, b, }
 #define LEFT_RECURSIVE(S, A, SN, ...)								\
-P(S)																\
+Node * S(Env * env, Source * s)										\
 {																	\
 	CHECK_FIRST(S);													\
 	/* A*/															\
-	Node * ret = newNode(SN);										\
-	addChild(ret, NODE(A));											\
+	Node * ret = A(env, s);											\
 																	\
 	/* S' */														\
 	int _s[] = {__VA_ARGS__};										\
-	while (INSET(_s) || (!sizeof(_s) && IN_FIRST(A))){				\
-		Node * t = newNode(SN);										\
-		addChild(t, ret);											\
+	while (INSET(_s) || (!sizeof(_s) && IN_FIRST(A))) {				\
 		/* _s */													\
-		if (sizeof(_s))												\
-		addChild(t, newAttrNode(next(s)));							\
+		if (sizeof(_s))	{											\
+			Node * t = newAttrNode(next(s));						\
+			addChild(t, ret);										\
+			addChild(t, A(env, s));									\
+			ret = t;												\
+		}else {														\
+			Node * last = ret;										\
+			while (last->sbling) {									\
+				last = last->sbling;								\
+			}														\
+			last->sbling = A(env, s);								\
+		}															\
+																	\
 		/* A */														\
-		addChild(t, NODE(A));										\
-		ret = t;													\
 	}																\
 	return ret;														\
 }
 
-/*
- * 一下产生式来自c语言文档n1548
- */
-
-/* 表达式 */
-
-P( primary_expression			);
-P( postfix_expression			);
-P( argument_expression_list		);
-P( unary_expression				);
-P( unary_operator				);
-P( cast_expression				);
-P( multiplicative_expression	);
-P( additive_expression			);
-P( shift_expression				);
-P( relational_expression		);
-P( equality_expression			);
-P( AND_expression				);
-P( exclusive_OR_expression		);
-P( inclusive_OR_expression		);
-P( logical_AND_expression		);
-P( logical_OR_expression		);
-P( conditional_expression		);
-P( assignment_expression		);
-P( assignment_operator			);
-P( expression					);
-P( constant_expression			);
-
-/* 声明 */
-P( declaration					);
-P( declaration_specifiers		);
-P( init_declarator_list			);
-P( init_declarator				);
-P( storage_class_specifier      );
-P( type_specifier				);
-P( struct_specifier				);
-P( struct_declaration_list		);
-P( struct_declaration			);
-P( specifier_qualifier_list		);
-P( struct_declarator			);
-P( struct_declarator_list		);
-P( enum_specifier				);
-P( enumerator_list				);
-P( enumerator					);
-P( type_qualifier				);
-P( function_specifier			);
-P( declarator					);
-P( direct_declarator			);
-P( pointer						);
-P( type_qualifier_list			);
-P( parameter_type_list			);
-P( parameter_list				);
-P( parameter_declaration		);
-P( identifier_list				);
-P( type_name					);
-P( initializer					);
-P( initializer_list				);
-P( designation					);
-P( designator_list				);
-P( designator					);
-
-/* 语句 */
-P( statement					);
-P( labeled_statement			);
-P( compound_statement			);
-P( compound_statement			);
-P( block_item_list				);
-P( block_item					);
-P( expression_statement			);
-P( selection_statement			);
-P( iteration_statement			);
-P( jump_statement				);
-
-/* 定义 */
-
-P( translation_unit				);
-P( external_declaration			);
-P( function_definition			);
-P( declaration_list				);
+#define Call(X,...) X(env,s,#__VA_ARGS__)
 
 
-#undef P
-#define P(X) Node * X(Env * env, Source * s)
+void makeBase(Node * n, Type * base);
 
-
-P_(expression);

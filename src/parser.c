@@ -1,13 +1,12 @@
 #include "parser.h"
+#include "env.h"
 #include "lex.h"
 
 Node * newNode(Op op)
 {
-	Node * node = (Node*)new(sizeof(Node));
+	Node * node = (Node*)_new(sizeof(Node));
 	node->op = op;
 	node->attr = -1;
-	node->child = NULL;
-	node->sbling = NULL;
 	return node;
 }
 Node * newAttrNode(Token t)
@@ -18,6 +17,7 @@ Node * newAttrNode(Token t)
 }
 void addChild(Node * p, Node * c)
 {
+	if (!p || !c) return;
 	if (p->child == NULL) {
 		p->child = c;
 		return;
@@ -47,8 +47,12 @@ void printNode(Source * s, Node * n)
     }else {
 		printTag(n->op);
 		Tag _t = n->op;
-		if (_t == Id || (ConstChar <= _t && _t <= ConstStr)) {
+		if (_t == Id || (ConstChar < _t && _t < ConstStr)) {
 			printf("(%s)",s->stringPool.pool + n->attr);
+		}else if (_t == ConstChar) {
+			printf("'%c'",n->attr);
+		}else if (_t == ConstStr) {
+			printf("\"%s\"",s->stringPool.pool + n->attr);
 		}
 	}
 	fflush(stdout);
@@ -64,9 +68,20 @@ int match(Source * s,Tag t)
         printf(":\n");
 		println(s);
 		return 0;
-    }
+    }else {
+		next(s);
+	}
 	return 1;
 }
-/* 辅助过程 xx_*/
 
-
+void makeBase(Node * n, Type * base)
+{
+	if (!n || !base) return;
+	if (!n->type) {
+		n->type = base;
+		return;
+	}
+	Type * b = n->type;
+	while (b && b->base) b = b->base;
+	b->base = base;
+}

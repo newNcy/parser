@@ -1,518 +1,360 @@
+#include "env.h"
 #include "lex.h"
+#include "map.h"
 #include "parser.h"
+#include "vector.h"
 
-P(type_name)
+
+Type* type_name(Env * env, Source * s)
 {
-	CHECK_FIRST(type_name);
-	Node * ret = newNode(TYPE_NAME);
-	addChild(ret, NODE(specifier_qualifier_list));
-	if (IN_FIRST(declarator)) {
-		addChild(ret, NODE(declarator));
-	}
-	return ret;
-}
-
-P(specifier_qualifier_list)
-{
-	CHECK_FIRST(specifier_qualifier_list);
-	Node * ret = newNode(SPECIFIER_QUALIFIER_LIST);
-	if (IN_FIRST(type_qualifier)) {
-		addChild(ret, NODE(type_qualifier));
-	}else {
-		addChild(ret, NODE(type_specifier));
-	}
-	while (IN_FIRST(specifier_qualifier_list)) {
-		Node * t = newNode(SPECIFIER_QUALIFIER_LIST);
-		if (IN_FIRST(type_qualifier)) {
-			addChild(ret, NODE(type_qualifier));
-		}else {
-			addChild(ret, NODE(type_specifier));
-		}
-		addChild(ret, t);
-	}
-	return ret;
-}
-
-LEFT_RECURSIVE(struct_declarator_list, declarator, STRUCT_DECLARATOR_LIST, ',')
-P(struct_declaration)
-{
-	Node * sd = newNode(STRUCT_DECLARATION);
-	addChild(sd, NODE(specifier_qualifier_list));
-	if (IN_FIRST(struct_declarator_list)) {
-		addChild(sd, NODE(struct_declarator_list));
-	}
-	X(';');
-	addChild(sd, newAttrNode(next(s)));
-	return sd;
-}
-P(struct_declaration_list)
-{
-	CHECK_FIRST(struct_declaration);
-	Node * sdl = newNode(STRUCT_DECLARATION_LIST);
-	addChild(sdl, NODE(struct_declaration));
-
-	while (IN_FIRST(struct_declaration)) {
-		Node * t = newNode(STRUCT_DECLARATION_LIST);
-		addChild(t, sdl);
-		addChild(t, NODE(struct_declaration));
-		sdl = t;
-	}
-	return sdl;
-}
-
-P(struct_specifier)
-{
-	CHECK_FIRST(struct_specifier);
-    Node * ss = newNode(STRUCT_SPECIFIER);
-    addChild(ss, newAttrNode(next(s)));
-
-	if (look(s).tag == Id) {
-		addChild(ss, newAttrNode(next(s)));
-		if (look(s).tag == '{') {
-			addChild(ss, newAttrNode(next(s)));
-			if (IN_FIRST(struct_declaration_list))
-				addChild(ss, NODE(struct_declaration_list));
-			X('}');
-			addChild(ss, newAttrNode(next(s)));
-		}
-	}else {
-		X('{');
-		addChild(ss, newAttrNode(next(s)));
-		if (IN_FIRST(struct_declarator_list))
-			addChild(ss, NODE(struct_declaration_list));
-		X('}');
-		addChild(ss, newAttrNode(next(s)));
-	}
-    return  ss;
-}
-
-P(enumerator)
-{
-	CHECK_FIRST(enumerator);
-	Node * e = newNode(ENUMERATOR);
-	addChild(e, newAttrNode(next(s)));
-	if (look(s).tag == '=') {
-		addChild(e, newAttrNode(next(s)));
-		Node * ce = NODE(constant_expression);
-		if (!ce) {
-			expected(Constant_expression);
-		}
-		addChild(e, ce);
-	}
-	return e;
-}
-
-LEFT_RECURSIVE(enumerator_list, enumerator, ENUMERATOR_LIST, ',');
-P(enum_specifier)
-{
-	CHECK_FIRST(enum_specifier);
-    Node * ss = newNode(ENUM_SPECIFIER);
-    addChild(ss, newNode(next(s).tag));
-	if (look(s).tag == Id) {
-		addChild(ss, newAttrNode(next(s)));
-	}
-
-	if (look(s).tag == '{') {
-		addChild(ss, newAttrNode(next(s)));
-		addChild(ss, NODE(enumerator_list));
-		X('}');
-		addChild(ss, newAttrNode(next(s)));
-	}
-    return  ss;
-}
-
-P(type_qualifier)
-{
-    CHECK_FIRST(type_qualifier);
-    Node * tq = newNode(TYPE_QUALIFIER);
-    addChild(tq, newNode(next(s).tag));
-    return tq;
-}
-
-P(type_specifier)
-{
-    CHECK_FIRST(type_specifier);
-    Node * ts = newNode(TYPE_SPECIFIER);
-    if(IN_FIRST(struct_specifier)) {
-        addChild(ts, NODE(struct_specifier));
-    }else if (IN_FIRST(enum_specifier)) {
-        addChild(ts, NODE(enum_specifier));
-    }else {
-        addChild(ts,newNode(next(s).tag));
-    }
-    return ts;
-}
-
-P(type_qualifier_list)
-{
-    CHECK_FIRST(type_qualifier_list);
-    Node * tql = newNode(TYPE_QUALIFIER_LIST);
-    addChild(tql, NODE(type_qualifier));
-    
-    return tql;
-}
-
-P(pointer)
-{
-    CHECK_FIRST(pointer);
-    Node * p = newNode(POINTER);
-    addChild(p, newNode(next(s).tag));
-    if (IN_FIRST(type_qualifier_list)) {
-        addChild(p, NODE(type_qualifier_list));
-    }
-    return p;
-}
-
-
-P(block_item) 
-{
-	CHECK_FIRST(block_item);
-	Node * ret = newNode(BLOCK_ITEM);
-	if (IN_FIRST(declaration)) {
-		addChild(ret, NODE(declaration));
-	}else if (IN_FIRST(statement)) {
-		addChild(ret, NODE(statement));
-	}
-	return ret;
-}
-
-P(block_item_list)
-{
-	CHECK_FIRST(block_item_list);
-	Node * bil = newNode(BLOCK_ITEM_LIST);
-	addChild(bil, NODE(block_item));
-	while (IN_FIRST(block_item)) {
-		Node * n = newNode(BLOCK_ITEM_LIST);
-		addChild(n, bil);
-		addChild(n, NODE(block_item));
-		bil = n;
-	}
-	return bil;
-}
-
-P(compound_statement)
-{
-	CHECK_FIRST(compound_statement);
-	Node * cs = newNode(COMPOUND_STATEMENT);
-	addChild(cs, newAttrNode(next(s)));
-	if (IN_FIRST(block_item_list)) {
-		addChild(cs,NODE(block_item_list));
-	}
-	X('}');
-	addChild(cs, newAttrNode(next(s)));
-	return cs;
-	
-}
-
-P(init_declarator)
-{
-	CHECK_FIRST(init_declarator);
-	Node * id = newNode(INIT_DECLARATOR);
-	addChild(id, NODE(declarator));
-	if (look(s).tag == '=') {
-		addChild(id, newAttrNode(next(s)));
-		addChild(id, NODE(initializer));
-	}
-	return id;
-}
-
-
-P(init_declarator_list)
-{
-	CHECK_FIRST(init_declarator_list);
-	Node * idl = newNode(INIT_DECLARATOR_LIST); 
-	addChild(idl, NODE(init_declarator));
-	//这回不用辅助过程了,显式迭代
-	while (!eos(s) && look(s).tag == ',') {
-		Node * n = newNode(INIT_DECLARATOR_LIST);
-		addChild(n,idl);
-		addChild(n, newAttrNode(next(s)));
-		Node * id = NODE(init_declarator);
-		if (!id) {
-			expected(Init_declarator);
-		}
-		addChild(n, id);
-		idl = n;
-	}
-	return idl;
-}
-
-P(declaration)
-{
-	CHECK_FIRST(declaration);
-	Node * d = newNode(DECLARATION);
-	Node * ds = NODE(declaration_specifiers);
-	if (!ds) {
-		expected(Declaration_specifiers);
-	}
-	addChild(d, ds);
-	Node * idl = NODE(init_declarator_list);
-	if (idl) addChild(d, idl);
-	if (look(s).tag == ';') {
-		addChild(d, newAttrNode(next(s)));
-	}else {
-		expected(;);
-	}
-}
-
-P_(declaration_list)
-{
-	if (!IN_FIRST(declaration)) return first;
-	Node * dl = newNode(DECLARATION_LIST);
-	addChild(dl, first);
-	addChild(dl, NODE(declaration));
-	return declaration_list_(env,dl, s);
-}
-
-P(declaration_list)
-{
-	CHECK_FIRST(declaration_list);
-	Node * dl = newNode(DECLARATION_LIST);
-	addChild(dl, NODE(declaration));
-	return declaration_list_(env, dl, s);
-}
-
-P(parameter_declaration)
-{
-	CHECK_FIRST(parameter_declaration);
-	Node * pd = newNode(PARAMETER_DECLARATION);
-	addChild(pd, NODE(declaration_specifiers));
-	if (IN_FIRST(declarator)) {
-		addChild(pd, NODE(declarator));
-	}
-	return pd;
-}
-
-P(parameter_list)
-{
-	CHECK_FIRST(parameter_list);
-	Node * pl = newNode(PARAMETER_LIST);
-	addChild(pl, NODE(parameter_declaration));
-	while (look(s).tag == ',') {
-		Node * t = newNode(PARAMETER_LIST);
-		addChild(t, pl);
-		addChild(t, newAttrNode(next(s)));
-		addChild(t, NODE(parameter_declaration));
-		pl = t;
-	}
-	return pl;
-}
-P(direct_declarator)
-{
-	CHECK_FIRST(direct_declarator);
-	Node * dd = newNode(DIRECT_ABSTRACT_DECLARATOR);
-	switch(look(s).tag) {
-		case Id:
-			addChild(dd, newAttrNode(next(s)));
-			dd->op = DIRECT_DECLARATOR;
-			break;
-		case '(':
-			addChild(dd, newNode(next(s).tag));
-			Node * dr  = NODE(declarator);
-			dd->op = dr->op == DECLARATOR?DIRECT_DECLARATOR:ABSTRACT_DECLARATOR;
-			addChild(dd, dr);
-			X(')');
-			addChild(dd, newAttrNode(next(s)));
-			break;
-	}
-
-	while (look(s).tag == '(') {
-		Node * t = newNode(dd->op);
-		addChild(t, dd);
-		addChild(t,newAttrNode(next(s)));
-		if (IN_FIRST(parameter_list))
-			addChild(t, NODE(parameter_list));
-		X(')');
-		addChild(t, newAttrNode(next(s)));
-
-		dd = t;
-	}
-	return dd;
-}
-
-P(declarator)
-{
-    CHECK_FIRST(declarator);
-    Node * dc = newNode(ABSTRACT_DECLARATOR);
-	if (IN_FIRST(pointer)) {
-		addChild(dc, NODE(pointer));
-	}
+	Type * base = declaration_specifiers(env, s);
 	if (IN_FIRST(direct_declarator)) {
-		Node * dd = NODE(direct_declarator);
-		dc->op = dd->op == DIRECT_DECLARATOR? DECLARATOR: ABSTRACT_DECLARATOR;
-		addChild(dc, dd);
+		Node * n = direct_declarator(env, s);
+		makeBase(n, base);
+		base = n->type;
 	}
-	return dc;
-
-}
-P(storage_class_specifier)
-{
-	CHECK_FIRST(storage_class_specifier);
-	Node * scs = newNode(STORAGE_CLASS_SPECIFIER);
-	addChild(scs, newNode(next(s).tag));
-	return scs;
+	return base;
 }
 
-P(declaration_specifiers)
+Node * declarator (Env * env, Source * s);
+
+Type * storage_class_specifier(Env * env, Source * s)
 {
-	CHECK_FIRST(declaration_specifiers);
-    Node * declSpec = newNode(DECLARATION_SPECIFIERS);
-    if (IN_FIRST(storage_class_specifier)) {
-        addChild(declSpec, NODE(storage_class_specifier));
-    }else if (IN_FIRST(type_specifier)) {
-        addChild(declSpec, NODE(type_specifier));
-    }else if (IN_FIRST(type_qualifier)) {
-        addChild(declSpec, NODE(type_qualifier));
-    }
-	if (IN_FIRST(declaration_specifiers)) {
-		addChild(declSpec, NODE(declaration_specifiers));
+	Tag t = next(s).tag;
+	Type * type = NULL;
+
+	if (IN_FIRST(declaration_specifiers)) type = declaration_specifiers(env, s);
+	else type = new(Type, TypeNone);
+
+	if (type->storageClass != StorageAuto) {
+		error("多余的存储限定符")
+	}else {
+		type->storageClass = StorageTypedef + t - Typedef;
 	}
-    return declSpec;
+	return type;
 }
 
-
-P(initializer_list)
+Type * type_qualifier(Env * env, Source * s)
 {
-	CHECK_FIRST(initializer_list);
-	Node * initerl = newNode(INITIALIZER_LIST);
-	if (IN_FIRST(designation)) {
-		addChild(initerl, NODE(designation));
-	}
-	addChild(initerl, NODE(initializer));
-	
-	while (look(s).tag == ',') {
-		Node * t = newNode(INITIALIZER_LIST);
-		addChild(t, initerl);
-		addChild(t, newAttrNode(next(s)));
-		if (IN_FIRST(designation)) {
-			addChild(t, NODE(designation));
+	Tag t = next(s).tag;
+	Type * type = NULL;
+
+	if (IN_FIRST(declaration_specifiers)) type = declaration_specifiers(env, s);
+	else type = new(Type, TypeNone);
+
+	if (t == Const) {
+		if (type->isConst) {
+			printf("重复的const\n");
+		}else {
+			type->isConst = true;
 		}
-		addChild(t, NODE(initializer));
-
-		initerl = t;
 	}
-	return initerl;
+	return type;
 }
 
-P(designator)
+
+
+Vector * enumerator_list(Env * env, Source * s)
 {
-	Node * dt = newNode(DESIGNATOR);
+	CHECK_FIRST(enumerator_list);
+	Vector * enumerators = new(Vector);
+	long enumValue = 0;
+	while (look(s).tag == Id) {
+		char * attrName = s->stringPool.pool + next(s).attr;
+		if (look(s).tag == '=') {
+			next(s);
+			Node * valueNode = constant_expression(env, s);
+			enumValue = evalExpr(valueNode);
+		}
+		if (look(s).tag == ',') next(s);
+
+		long * pre = mapSearch(env->enumValues, attrName);
+		if (pre) {
+			error("对枚举常量 %s 重复定义",attrName);
+		}else {
+			char * name = (char*)_new(SYMBOL_LEN_MAX);
+			strncpy(name, attrName, SYMBOL_LEN_MAX);
+			vectorPushBack(enumerators, name);
+			mapInsert(env->enumValues, name, enumValue);
+		}
+		enumValue ++;
+	}
+	return enumerators;
+}
+
+Type* enum_specifer(Env * env, Source * s)
+{
+	next(s);
+	Type * ret = NULL;
+	char * name = NULL;
+	//id
+	if (look(s).tag == Id) {
+		name = s->stringPool.pool + next(s).attr;
+	}
+
+	//定义
+	Type * def = NULL;
+	if (look(s).tag == '{') {
+		next(s);
+		def = new(Type, TypeEnum);
+		def->info = enumerator_list(env, s);
+		X('}');
+	}
+
+	//先前定义
+	Type ** pre = NULL;
+	if (name) {
+		pre = mapSearch(env->types, name);
+		if (pre) {
+			error("对%s重复定义",name);
+		}else {
+			mapInsert(env->types, name, def);
+		}
+	}else if (!def) {
+		Env * scope = env->parent;
+		while (scope)
+	}
+
+	if (def) {
+		ret = def;
+	}else {
+
+	}
+	return ret;
+}
+
+Type * type_specifier(Env * env, Source * s)
+{
+
 	switch(look(s).tag) {
-		case '[':
-			addChild(dt, newAttrNode(next(s))); 
-			addChild(dt, NODE(constant_expression));
-			X(']');
-			addChild(dt, newAttrNode(next(s)));
-			break;
-		case '.':
-			addChild(dt, newAttrNode(next(s))); 
-			if (look(s).tag != Id) {
-				expected(Id);
+		case Void:
+		case Char:
+		case Short:
+		case Int:
+		case Float:
+		case Long:
+		case Double:
+			{
+				TypeKind kind = next(s).tag - Void + TypeVoid;
+				if (!IN_FIRST(declaration_specifiers))
+					return new(Type, kind);
+				else  {
+					Type * type = declaration_specifiers(env, s);
+					if (type->kind != TypeNone) {
+						error("重复的类型限定符");
+					}
+					type->kind = kind;
+				}
 			}
-			addChild(dt, newAttrNode(next(s)));
+			break;
+		case Enum:
+			return enum_specifer(env, s);
+		case Struct:
+			break;
+		case Union:
 			break;
 		default:
 			return NULL;
 	}
+}
+
+Type * declaration_specifiers(Env * env, Source * s)
+{
+	while (true) {
+		if (IN_FIRST(storage_class_specifier)) {
+			return storage_class_specifier(env, s);
+		}else if (IN_FIRST(type_qualifier)) {
+			return type_qualifier(env, s);
+		}else if (IN_FIRST(type_specifier)) {
+			return type_specifier(env, s);
+		}else {
+			error("声明限定符为空");
 			return NULL;
-}
-
-LEFT_RECURSIVE(designator_list, designator, DESIGNATOR_LIST);
-P(designation)
-{
-	CHECK_FIRST(designation);
-	Node * des = newNode(DESIGNATION);
-	addChild(des, NODE(designator_list));
-	X('=');
-	addChild(des, newAttrNode(next(s)));
-	return des;
-}
-
-P(initializer)
-{
-	CHECK_FIRST(initializer);
-	Node * initer = newNode(INITIALIZER);
-	if (look(s).tag == '{' ) {
-		addChild(initer, newAttrNode(next(s))); 
-		addChild(initer, NODE(initializer_list));
-		match(s,'}');
-		addChild(initer, newNode('}'));
-	}else {
-		addChild(initer, NODE(assignment_expression));
+		}
 	}
-	return initer;
+}
+
+Type * pointer(Env * env, Source * s)
+{
+	next(s);
+	Type * type = NULL;
+	if (IN_FIRST(type_qualifier)) {
+		type = type_qualifier(env, s);
+	}else type = new(Type, TypePointer);
+
+	if (look(s).tag == '*') {
+		Type * t = pointer(env, s);
+		t->base = type;
+		type = t;
+	}
+	return type;
 }
 
 
-
-P(external_declaration)
+Symbol * parameter_declaration(Env * env, Source * s )
 {
-    //左公因子
-    Node * n = newNode(EXTERNAL_DECLARATION);
-    Node * declspec = NODE(declaration_specifiers);
+	CHECK_FIRST(parameter_declaration);
+	Type * type = declaration_specifiers(env,s);
+	Node * n = declarator(env,s);
+	makeBase(n,type);
+	Symbol * sym = new(Symbol);
+	sym->type = n->type;
+	strcpy(sym->name, s->stringPool.pool + n->attr);
+	return sym;
+}
+
+Vector * parameter_list(Env * env, Source * s)
+{
+	CHECK_FIRST(declaration_specifiers);
+	Vector * parametes = new(Vector);
+	Symbol * first = parameter_declaration(env, s);
+	if (first) {
+		vectorPushBack(parametes, first);
+	}
+	while (look(s).tag == ',') {
+		next(s);
+		Symbol * s = parameter_declaration(env, s);
+		if (s) {
+			vectorPushBack(parametes, s);
+		}
+	}
+	return parametes;
+}
+
+Node * direct_declarator(Env * env, Source * s)
+{
+	Node * ret = NULL;
+	if (look(s).tag == Id) {
+		ret = new(Node, DECLARATOR);
+		ret->attr = next(s).attr;
+	}else if (look(s).tag == '(') {
+		next(s);
+		ret = declarator(env, s);
+		X(')');	
+	}else {
+		error("需要id或者(");
+		return ret;
+	}
+
+	int finish = 0;
+	while (look(s).tag == '[' || look(s).tag == '(' ) {
+		Type * t = NULL;
+		switch(look(s).tag) {
+			case '['://数组声明
+				next(s);
+				X(']');
+				break;
+			case  '('://函数声明
+				next(s);
+				t = new(Type,TypeFunc);
+				t->info = parameter_list(env, s);
+				X(')');
+			default:
+				finish = 1;
+		}
+		if (ret->type) {
+			Type * b = ret->type;
+			while (b && b->base) b = b->base;
+			b->base = t;
+		}else {
+			ret->type = t;
+		}
+	}
+	return ret;
+
+}
+Node * declarator (Env * env, Source * s)
+{
+
+	Type * type = NULL;
+	if (look(s).tag == '*') {
+		type = pointer(env,s);
+	}
+
+	if (IN_FIRST(direct_declarator)) {
+		Node * dd = NODE(direct_declarator);
+		makeBase(dd, type);
+		return dd;
+	}else {
+		Node * n = new(Node, ABSTRACT_DECLARATOR);
+		n->type = type;
+		return n;
+	}
+
+}
+
+Node * init_declarator(Env * env, Source * s, Type * type)
+{
+}
+
+Node * compound_statement(Env * env, Source * s)
+{
+}
+
+Node * initializer(Env * env, Source *s)
+{
+}
+Node * external_declaration(Env * env, Source * s)
+{
+	//左公因子
+	Node * n = newNode(EXTERNAL_DECLARATION);
+	Type * type = declaration_specifiers(env, s);
 	if (look(s).tag == ';') { //external_declaration -> declaration (init_declarator_list) ;
+		next(s);
 		Node * d = newNode(DECLARATION);
-		addChild(d, declspec);
-		addChild(d, newAttrNode(next(s))); 
 		addChild(n , d);
 		return n;
 	}
 	//他俩下一个都是
-	if (!IN_FIRST(declarator)) {
-		expected(Declarator);
-		return NULL;
-	}
+	Node * dr = declarator(env, s);
+	makeBase(dr, type);
 
-	Node * dr = NODE(declarator);
-
+	printf("%s is a ",s->stringPool.pool + dr->attr);
+	dumpType(dr->type);
 	if (IN_FIRST(compound_statement)) 
 	{
 		Node * funcd = newNode(FUNCTION_DEFINITION);
-		addChild(funcd, declspec);
 		addChild(funcd, dr);
-		addChild(funcd, NODE(compound_statement));
+		Node * body = NODE(compound_statement);
+		addChild(funcd, body);
 		addChild(n, funcd);
 
 	}else {
 		Node * d = newNode(DECLARATION);
-		addChild(d, declspec);
-		
+
 		Node * initdl = newNode(INIT_DECLARATOR_LIST);
 		Node * initd = newNode(INIT_DECLARATOR);
 		addChild(initd, dr);
 		if (look(s).tag == '=') {
-			addChild(initd, newAttrNode(next(s)));
+			next(s);
 			addChild(initd, NODE(initializer));
 		}
 		addChild(initdl, initd);
 		while (look(s).tag == ',') {
+			next(s);
 			Node * t = newNode(INIT_DECLARATOR_LIST);
 			addChild(t, initdl);
-			addChild(t, newAttrNode(next(s)));
-			addChild(t, NODE(init_declarator));
+			addChild(t, init_declarator(env, s, type));
 			initdl = t;
 		}
 		addChild(d, initdl);
 		X(';');
-		addChild(d, newAttrNode(next(s)));
 		addChild(n, d);
 	}
+
+
+	//for typedef 
 	return n;
 }
 
 
-P(translation_unit)
+Vector * translation_unit(Env * env, Source * s)
 {
 	CHECK_FIRST(external_declaration);
-	Node * tu = newNode(TRANSLATION_UNIT);
-	addChild(tu, NODE(external_declaration));
 
+	Vector * top = new(Vector);
 	while (IN_FIRST(external_declaration)) {
-		Node * t = newNode(TRANSLATION_UNIT);
-		addChild(t, tu);
-		addChild(t, NODE(external_declaration));
-		tu = t;
+		vectorPushBack(top, external_declaration(env, s) );
 	}
-	return tu;
 }
 

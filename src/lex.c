@@ -1,4 +1,6 @@
 #include "lex.h"
+#include "map.h"
+#include "parser.h"
 
 
 int digit(char c)
@@ -31,10 +33,10 @@ void deleteSource(Source ** s)
 	if (s) {
 		Source * _s = *s;
 		if (_s && _s->len) {
-			free(_s->code);
+			delete(_s->code);
 		}
-		free(_s->stringPool.pool);
-		free(_s);
+		delete(_s->stringPool.pool);
+		delete(_s);
 		*s = NULL;
 	}
 }
@@ -42,10 +44,10 @@ void deleteSource(Source ** s)
 
 Source * newSource(unsigned int size)
 {
-	Source * s = (Source*)new(sizeof(Source));
+	Source * s = (Source*)_new(sizeof(Source));
 	if (!s) return NULL;
 	s->len = 0;
-	s->code = new(size);
+	s->code = _new(size);
 	if (!s->code) {
 		deleteSource(&s);
 		return NULL;
@@ -56,7 +58,7 @@ Source * newSource(unsigned int size)
 	const int strPoolSize = 4096;
 	s->stringPool.size = strPoolSize;
 	s->stringPool.use = 0;
-	s->stringPool.pool = new(strPoolSize);
+	s->stringPool.pool = _new(strPoolSize);
 
 	s->look.tag = NoLook;
 	return s;
@@ -216,18 +218,46 @@ Token parseIdOrKeyword(Source * s)
 	s->stringPool.pool[s->stringPool.use++] = 0; 
 	return t;
 }
+Token parseString(Source * s)
+{
+}
 
+char turn (char ch)
+{
+	char c = 0;
+	switch(ch) {
+		case 't':
+			c = '\t';
+			break;
+		case 'n':
+			c = '\n';
+			break;
+		case 'b':
+			c = '\b';
+			break;
+		case '\"':
+			c = '\"';
+			break;
+		case '\\':
+			c = '\\';
+			break;
+		default:
+			printf("不支持的转义字符\\%c\n",c);
+
+	}
+	return c;
+}
 Token next(Source * s)
 {
 	Token t = {END, 0};
-	
+
 	//检查有没有向前看了
 	if (s->look.tag != NoLook) {
 		t = s->look;
 		s->look.tag = NoLook;
 		return t;
 	}
-	
+
 	if (eos(s)) return t;
 	char * code = s->code;
 
@@ -237,8 +267,8 @@ Token next(Source * s)
 			((code[s->cur] == ' ') 
 			 || (code[s->cur] == '\n')
 			 || (code[s->cur] == '\t')
-			 )
-			) s->cur++;
+			)
+		  ) s->cur++;
 	// ^#*'\n'
 	if (code[s->cur] == '#' ) {
 		while (!eos(s) && code[s->cur] != '\n') s->cur ++;
@@ -262,7 +292,7 @@ Token next(Source * s)
 	if (eos(s)) return t;
 	t.tag = code[s->cur];
 	if (code[s->cur] == '-' && digit(code[s->cur+1])) {
-			return parseNum(s);
+		return parseNum(s);
 	}	
 	//标识符 或者关键字 
 	else if (alpha(code[s->cur]) || code[s->cur] == '_') {
@@ -280,104 +310,99 @@ Token next(Source * s)
 		t.attr = s->stringPool.use;
 		while (code[s->cur] != '\"') {
 			char c = code[s->cur];
-			if (code[s->cur] == '\\') {
+			if (c == '\\') {
 				s->cur ++;
-				switch(code[s->cur]) {
-					case 't':
-						c = '\t';
-						break;
-					case 'n':
-						c = '\n';
-						break;
-					case 'b':
-						c = '\b';
-						break;
-					case '\"':
-						c = '\"';
-						break;
-					case '\\':
-						c = '\\';
-						break;
-					default:
-						printf("不支持的转义字符\\%c\n",c);
-				}
+				c = turn(s->code[s->cur]);
 			}
 			s->stringPool.pool[s->stringPool.use++] = c;
 			s->cur ++;
 		}
-		s->cur ++;
+		s->stringPool.pool[s->stringPool.use++] = 0;
 	}
-	
-	#define OP3(A,B,C,O) \
+
+	else if (code[s->cur] == '\'') {
+		s->cur ++;
+		char c = code[s->cur++];
+		if (c == '\\') {
+			c = turn(code[s->cur++]);
+		}
+		t.tag = ConstChar;
+		t.attr = c;
+		if (code[s->cur] != '\'') {
+			printf("缺少 '''\n");
+		}else {
+		}
+	}
+#define OP3(A,B,C,O) \
 	else if (code[s->cur] == (A) && code[s->cur+1] == (B) && code[s->cur+2] == (C)) { \
 		t.tag = O; \
 		s->cur += 2; \
 	}
-	
-	#define OP2(F,S,O) \
+
+#define OP2(F,S,O) \
 	else if (code[s->cur] == F && code[s->cur+1] == S) { \
 		s->cur ++; \
 		t.tag = O; \
 	}
-	#define OP(X) \
+#define OP(X) \
 	else if (code[s->cur] == (X) ) {t.tag = (X);}
-	
+
 
 	OP3('<','<','=',LsEq)
-	OP3('>','>','=',RsEq)
-	//表示F后面如果跟着S,那么它是O,否则它是F
-	OP2('-', '>', Pto)
-	OP2('-', '-', SSub)
-	OP2('+', '+', SSub)
-	OP2('<', '<', Lsft)
-	OP2('>', '>', Rsft)
+		OP3('>','>','=',RsEq)
+		//表示F后面如果跟着S,那么它是O,否则它是F
+		OP2('-', '>', Pto)
+		OP2('-', '-', SSub)
+		OP2('+', '+', SSub)
+		OP2('<', '<', Lsft)
+		OP2('>', '>', Rsft)
 
-	OP2('+', '=', Aeq)
-	OP2('-', '=', Seq)
-	OP2('*', '=', Teq)
-	OP2('/', '=', Deq)
-	OP2('%', '=', Meq)
+		OP2('+', '=', Aeq)
+		OP2('-', '=', Seq)
+		OP2('*', '=', Teq)
+		OP2('/', '=', Deq)
+		OP2('%', '=', Meq)
 
-	OP2('&', '=', AndEq)
-	OP2('|', '=', OrEq)
-	OP2('^', '=', XorEq)
-	
-	OP2('=', '=', Eq)
-	OP2('!', '=', Neq)
-	OP2('<', '=', Leq)
-	OP2('>', '=', Geq)
-	OP2('&', '&', And)
-	OP2('|', '|', Or)	
+		OP2('&', '=', AndEq)
+		OP2('|', '=', OrEq)
+		OP2('^', '=', XorEq)
+
+		OP2('=', '=', Eq)
+		OP2('!', '=', Neq)
+		OP2('<', '=', Leq)
+		OP2('>', '=', Geq)
+		OP2('&', '&', And)
+		OP2('|', '|', Or)	
 
 
-	OP('[')
-	OP(']')
-	OP('(')
-	OP(')')
-	OP('{')
-	OP('}')
-	OP('.')
-	OP(';')
-	OP(',')
-	OP('+')
-	OP('-')
-	OP('*')
-	OP('%')
-	OP('^')
-	OP('?')
-	OP(':')
-	OP('>')
-	OP('<')
-	OP('^')
-	OP('&')
-	OP('|')
-	OP('!')
-	OP('=')
+		OP('[')
+		OP(']')
+		OP('(')
+		OP(')')
+		OP('{')
+		OP('}')
+		OP('.')
+		OP(';')
+		OP(',')
+		OP('+')
+		OP('-')
+		OP('*')
+		OP('%')
+		OP('^')
+		OP('?')
+		OP(':')
+		OP('>')
+		OP('<')
+		OP('^')
+		OP('&')
+		OP('|')
+		OP('!')
+		OP('=')
 
-	#undef OP3
-	#undef OP2
-	#undef OP
-	
+#undef OP3
+#undef OP2
+#undef OP
+
 	else if (code[s->cur] == EOF) {
 
 	}else {

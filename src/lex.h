@@ -7,12 +7,12 @@
 typedef enum Tag
 {
 	//类型
-	Void = 256, Char, Short, Int, Long, Float, Double, Unsigned, Enum, Struct,
+	Void = 256, Char, Short, Int, Long, Float, Double, Unsigned, Enum,Union,  Struct,
 	Sizeof,
 	Id,
 
 	If, Else, Switch, Case, Default, While, For, Continue, Break, Return,
-	Extern, Static, Const, Inline, 
+	Typedef, Extern, Static, Const, Inline, 
 
 	ConstChar,ConstInt,ConstFloat,ConstLong,ConstDouble,ConstStr,
 	//括号
@@ -34,12 +34,12 @@ typedef enum Tag
 
 static const char * tagName[] = 
 {
-	"Void ", "Char", "Short", "Int", "Long", "Float", "Double", "Unsigned", "Enum", "Struct",
+	"Void ", "Char", "Short", "Int", "Long", "Float", "Double", "Unsigned", "Enum", "Union", "Struct",
 	"Sizeof",
 	"Id",
 
 	"If", "Else", "Switch", "Case", "Default", "While", "For", "Continue", "Break", "Return",
-	"Extern", "Static", "Const", "Inline", 
+	"Typedef","Extern", "Static", "Const", "Inline", 
 
 	"ConstChar","ConstInt","ConstFloat","ConstLong","ConstDouble","ConstStr",
 	//括号
@@ -77,10 +77,12 @@ static MapEntry keyMap [] =
 	{"double",	Double},
 	{"struct",	Struct},
 	{"enum",	Enum},
+	{"union",	Union},
 	{"sizeof",	Sizeof},
     {"unsigned",Unsigned},
     {"const",   Const},
 
+    {"typedef", Typedef},
     {"static",  Static},
     {"extern",  Extern},
     {"inline",  Inline},

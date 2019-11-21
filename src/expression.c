@@ -1,13 +1,19 @@
 #include "lex.h"
 #include "parser.h"
-#include <pthread.h>
 
 
+#define P(X)  Node * X(Env * env, Source *s)
+#define NODE(X) X(env, s)
+
+
+P(constant_expression);
+P(conditional_expression);
+P(expression);
 /* 先搞表达式 */
 P( primary_expression )
 {
 	CHECK_FIRST(primary_expression);
-	Node * ret = newNode(PRIMARY_EXPRESSION);
+	Node * ret = NULL;
     switch(look(s).tag) {
     case Id:
     case ConstChar:
@@ -16,13 +22,12 @@ P( primary_expression )
     case ConstLong:
     case ConstDouble:
     case ConstStr:
-		addChild(ret, newAttrNode(next(s)));	
+		ret = newAttrNode(next(s));
         break;
     case '(':
-		addChild(ret, newAttrNode(next(s)));	
-        addChild(ret, NODE( expression ));
+		next(s);
+		ret = expression(env, s);	
         X(')');
-		addChild(ret, newAttrNode(next(s)));	
         break;
     }
 	return ret;
@@ -205,4 +210,11 @@ P(constant_expression)
 {
 	CHECK_FIRST(constant_expression);
 	return NODE(conditional_expression);
+}
+
+long evalExpr(Node * node)
+{
+	switch(node->op) {
+	}
+	return 0;
 }

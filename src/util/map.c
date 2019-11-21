@@ -4,7 +4,7 @@
 
 RBNode * allocRBNode()
 {
-	RBNode * node = (RBNode*)new(sizeof(RBNode));
+	RBNode * node = (RBNode*)_new(sizeof(RBNode));
 	return node;
 }
 
@@ -116,13 +116,13 @@ RBNode * rotate(RBTree * tree, RBNode * node, Align align)
 	return newRoot;
 }
 
-Value * search(RBTree * tree,Key key) 
+const Value * mapSearch(RBTree * tree,Key key) 
 {
-	if (!tree || !tree->root || !tree->compare) return NULL;
+	if (!tree || !tree->root || !tree->_compare) return NULL;
 
 	RBNode * cur = tree->root;
 	while (cur) {
-		int res = tree->compare(tree->onwer, cur->pair.first, key);
+		int res = tree->_compare(tree->onwer, cur->pair.first, key);
 		if (!res) {
 			return &cur->pair.second;
 		}else if (res > 0) {
@@ -147,9 +147,9 @@ RBNode ** ptrNode(RBTree * tree, RBNode * node)
 	return nodePosition(node) == LEFT? &node->parent->left : &node->parent->right;
 }
 
-void insert(RBTree * tree, Key key, Value value)
+void mapInsert(RBTree * tree, Key key, Value value)
 {
-	if (!tree || !tree->compare) return;
+	if (!tree || !tree->_compare) return;
 
 	if (!tree->root) {
 		RBNode * root = allocRBNode();
@@ -166,7 +166,7 @@ void insert(RBTree * tree, Key key, Value value)
 
 	while (cur) {
 		parent = cur;
-		int res = tree->compare(tree->onwer,cur->pair.first, key);
+		int res = tree->_compare(tree->onwer,cur->pair.first, key);
 		if (!res) {
 			cur->pair.second = value;
 			return;
@@ -245,13 +245,13 @@ void eraseNode(RBTree * tree, RBNode * n)
 	deallocRBNode(n);
 }
 
-void delete(RBTree * tree, Key key)
+void mapDelete(RBTree * tree, Key key)
 {
-	if (!tree || !tree->root || !tree->compare) return;
+	if (!tree || !tree->root || !tree->_compare) return;
 
 	RBNode * cur = tree->root;
 	while (cur) {
-		int res = tree->compare(tree->onwer, cur->pair.first, key);
+		int res = tree->_compare(tree->onwer, cur->pair.first, key);
 		if (!res) break;
 		else if (res > 0) cur = cur->left;
 		else cur = cur->right;
@@ -259,7 +259,6 @@ void delete(RBTree * tree, Key key)
 
 	//找到删除节点
 	if (!cur) {
-		printf("not found\n");
 		return;
 	}
 
@@ -284,7 +283,7 @@ void delete(RBTree * tree, Key key)
 	}
 
 	//旋转调色
-	//算法导论rb-delete_fixup
+	//算法导论rb-delete-fixup
 	RBNode * me = replace;
 	while (me != tree->root && me->color == BLACK) {
 		Align myPos = nodePosition(me);
@@ -334,23 +333,23 @@ void defaultDelete(void * owner, Pair * pair)
 }
 RBTree * newRBTree(void *owner,Compare compare,Save save,Delete delete)
 {
-	RBTree * tree = (RBTree*)new(sizeof(RBTree));
-	tree->compare = compare?compare:defaultCompare;
-	tree->save = save?save:defaultSave;
-	tree->delete = delete?delete:defaultDelete;
+	RBTree * tree = (RBTree*)_new(sizeof(RBTree));
+	tree->_compare = compare?compare:defaultCompare;
+	tree->_save = save?save:defaultSave;
+	tree->_delete = delete?delete:defaultDelete;
 	return tree;
 }
 
 void recursiceDelete(RBTree * tree, RBNode * node)
 {
-	if (!tree || !node || !tree->delete) return;
+	if (!tree || !node || !tree->_delete) return;
 	recursiceDelete(tree, node->left);
 	recursiceDelete(tree, node->right);
-	tree->delete(tree->onwer, &node->pair);
+	tree->_delete(tree->onwer, &node->pair);
 }
 void deleteRBTree(RBTree * tree)
 {
-	if (!tree || !tree->delete) return;
+	if (!tree || !tree->_delete) return;
 	if (tree->root) {
 		recursiceDelete(tree, tree->root);
 	}
@@ -366,6 +365,7 @@ void printRBNode(RBNode * cur)
 		printf(" [%s|%ld]",cur->color?"B":"R",cur->pair.second);
 }
 
+
 void printTree(RBTree * tree)
 {
 	if(!tree || !tree->root) return;
@@ -377,7 +377,7 @@ void printTree(RBTree * tree)
 	int last = r;
 	while (w != r) {
 		RBNode * cur = buff[r];
-		if (cur && (cur->left ||cur->right)) {
+		if (cur ) {
 			printRBNode(cur);
 
 			printRBNode(cur->left);
@@ -404,8 +404,6 @@ void printTree(RBTree * tree)
 	}
 
 }
-
-
 /*
 int compare(void * owner, long a, long b)
 {
@@ -417,25 +415,30 @@ int main ()
 	RBTree * tree = newRBTree(NULL,compare, NULL, NULL);
 	struct {
 		char * key;
-		int count;
+		char * count;
 	} tests[] = {
-		{"abc",1},
-		{"cbd",2},
-		{"ddd",3},
-		{"ttt",4}
+		{"abc","cde"},
+		{"cbd","efg"},
+		{"ddd","aa"},
+		{"ttt","bbb"}
 	};
 
 	for (int i = 0; i < sizeof(tests)/sizeof(tests[0]); i++) {
-		insert(tree, tests[i].key, tests[i].count);
+		mapInsert(tree, tests[i].key, tests[i].count);
 	}
 	printTree(tree);
 
 	for (int i = 0; i < sizeof(tests)/sizeof(tests[0]); i++) {
-		Value * value = search(tree, tests[i].key);
+		Value * value = mapSearch(tree, tests[i].key);
 		if (value) {
-			printf("%s --> %d\n", tests[i].key, *value); 
+			printf("%s --> %s\n", tests[i].key, *value); 
 		}
 	}
-}
+	for (int i = 0; i < sizeof(tests)/sizeof(tests[0]); i++) {
+		mapDelete(tree, tests[i].key);
+		printTree(tree);
+		printf("\n");
+	}
 
+}
 */

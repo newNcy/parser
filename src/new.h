@@ -6,7 +6,7 @@
 #define NULL (void*)0
 #endif
 
-static void * new(unsigned int size)
+static void * _new(unsigned int size)
 {
 	static unsigned int sum = 0;
 	void * ret = malloc(size);
@@ -18,4 +18,10 @@ static void * new(unsigned int size)
 	return NULL;
 }
 
+#define new(X,...) new##X(__VA_ARGS__)
+#define delete(X)	\
+	if (X) {		\
+		free((void*)X);	\
+		X = 0;	\
+	}
 
