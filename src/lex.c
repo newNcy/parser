@@ -305,7 +305,7 @@ Token next(Source * s)
 			s->stringPool.pool[s->stringPool.use++] = c;
 			s->cur ++;
 		}
-		s->cur ++;
+		s->stringPool.pool[s->stringPool.use++] = 0;
 	}
 	
 	#define OP3(A,B,C,O) \

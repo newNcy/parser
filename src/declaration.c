@@ -253,6 +253,7 @@ P(declaration)
 	}else {
 		expected(;);
 	}
+	return d;
 }
 
 P_(declaration_list)
@@ -316,16 +317,25 @@ P(direct_declarator)
 			break;
 	}
 
-	while (look(s).tag == '(') {
-		Node * t = newNode(dd->op);
-		addChild(t, dd);
-		addChild(t,newAttrNode(next(s)));
-		if (IN_FIRST(parameter_list))
-			addChild(t, NODE(parameter_list));
-		X(')');
-		addChild(t, newAttrNode(next(s)));
-
-		dd = t;
+	for (;;){
+		int first [] = {'[', '('};
+		if (!INSET(first)) break;
+		Node * dd_temp = newNode(dd->op);
+		addChild(dd_temp, dd);
+		Token l = look(s);
+		addChild(dd_temp, newAttrNode(next(s)));
+		switch (l.tag) {
+			case '[':
+				X(']');
+				break;
+			case '(':
+				if (IN_FIRST(parameter_list))
+					addChild(dd_temp, NODE(parameter_list));
+				X(')');
+				break;
+		}
+		addChild(dd_temp, newAttrNode(next(s)));
+		dd = dd_temp;
 	}
 	return dd;
 }

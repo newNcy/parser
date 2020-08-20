@@ -6,10 +6,17 @@
 
 void visit(Source * s, Node * root)
 {
+	static int tab = 0;
 	if (!root) return;
     if(root->op < END) return;
+
+	printf("[%d]",tab);
+	for (int i = 0 ; i < tab; i++) {
+		printf(" ");
+	}
+
 	printNode(s,root);
-	printf(" -> ");
+	printf("-> ");
 	Node * p = root->child;
 	while (p) {
 		printNode(s, p);
@@ -18,8 +25,10 @@ void visit(Source * s, Node * root)
 	printf("\n");
 	p = root->child;
 	while (p) {
+		tab += 1;
 		visit(s, p);
 		p = p->sbling;
+		tab -= 1;
 	}
 }
 
