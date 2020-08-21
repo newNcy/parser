@@ -8,7 +8,7 @@ P( primary_expression )
 {
 	CHECK_FIRST(primary_expression);
 	Node * ret = newNode(PRIMARY_EXPRESSION);
-    switch(look(s).tag) {
+    switch(look(s, env).tag) {
     case Id:
     case ConstChar:
     case ConstInt:
@@ -16,13 +16,13 @@ P( primary_expression )
     case ConstLong:
     case ConstDouble:
     case ConstStr:
-		addChild(ret, newAttrNode(next(s)));	
+		addChild(ret, newAttrNode(next(s, env)));	
         break;
     case '(':
-		addChild(ret, newAttrNode(next(s)));	
+		addChild(ret, newAttrNode(next(s, env)));	
         addChild(ret, NODE( expression ));
         X(')');
-		addChild(ret, newAttrNode(next(s)));	
+		addChild(ret, newAttrNode(next(s, env)));	
         break;
     }
 	return ret;
@@ -33,7 +33,7 @@ P(assignment_operator)
 {
 	CHECK_FIRST(assignment_operator);
 	Node * ao = newNode(ASSIGNMENT_OPERATOR);
-	addChild(ao, newAttrNode(next(s)));
+	addChild(ao, newAttrNode(next(s, env)));
 	return ao;
 }
 
@@ -70,32 +70,32 @@ P( postfix_expression)
 	while (INSET(set)) {
 		Node * t = newNode(POSTFIX_EXPRESSION);
 		addChild(t, pe);
-		switch (look(s).tag) {
+		switch (look(s, env).tag) {
 			case '[':
-				addChild(t, newAttrNode(next(s)));
+				addChild(t, newAttrNode(next(s, env)));
 				addChild(t, NODE(expression));
 				X(']');
-				addChild(t, newAttrNode(next(s)));
+				addChild(t, newAttrNode(next(s, env)));
 				break;
 			case '(':
-				addChild(t, newAttrNode(next(s)));
+				addChild(t, newAttrNode(next(s, env)));
 				if (IN_FIRST(argument_expression_list)) {
 					addChild(t, NODE(argument_expression_list));
 				}
 				X(')');
-				addChild(t, newAttrNode(next(s)));
+				addChild(t, newAttrNode(next(s, env)));
 				break;
 			case '.':
 			case Pto:
-				addChild(t, newAttrNode(next(s)));
-				if (look(s).tag != Id) {
+				addChild(t, newAttrNode(next(s, env)));
+				if (look(s, env).tag != Id) {
 					expected(Id);
 				}
-				addChild(t, newAttrNode(next(s)));
+				addChild(t, newAttrNode(next(s, env)));
 				break;
 			case SPlus:
 			case SSub:
-				addChild(t, newAttrNode(next(s)));
+				addChild(t, newAttrNode(next(s, env)));
 				break;
 		}
 		pe = t;
@@ -111,23 +111,23 @@ P(unary_expression)
 		addChild(ret, NODE(postfix_expression));
 	}else if (IN_FIRST(unary_operator)) {
 		Node * uo = newNode(UNARY_OPERATOR);
-		addChild(uo, newAttrNode(next(s)));
+		addChild(uo, newAttrNode(next(s, env)));
 		addChild(ret, uo);
 		addChild(ret, NODE(unary_expression));
 	}else {
 		int isSizeof = 0;
-		switch(look(s).tag) {
+		switch(look(s, env).tag) {
 			case Sizeof:
 				isSizeof = 1;
 			case SPlus:
 			case SSub:
-				addChild(ret, newAttrNode(next(s)));
+				addChild(ret, newAttrNode(next(s, env)));
 				if (isSizeof) {
-					if(look(s).tag == '(') {
-						addChild(ret, newAttrNode(next(s)));
+					if(look(s, env).tag == '(') {
+						addChild(ret, newAttrNode(next(s, env)));
 						addChild(ret, NODE(type_name));
 						X(')');
-						addChild(ret, newAttrNode(next(s)));
+						addChild(ret, newAttrNode(next(s, env)));
 					}else {
 						addChild(ret, NODE(unary_expression));
 					}
@@ -141,21 +141,21 @@ P(cast_expression)
 {
 	CHECK_FIRST(cast_expression);
 	Node * ret = newNode(CAST_EXPRESSION);
-	if (look(s).tag == '(') {
-		addChild(ret, newAttrNode(next(s)));
+	if (look(s, env).tag == '(') {
+		addChild(ret, newAttrNode(next(s, env)));
 		if (IN_FIRST(type_name)) {
 			addChild(ret,NODE(type_name));
 			X(')');
-			addChild(ret, newAttrNode(next(s)));
+			addChild(ret, newAttrNode(next(s, env)));
 			if (!eos(s)) addChild(ret, NODE(cast_expression));
 		}else if (IN_FIRST(expression)) {
 			//推导树最底部构建,算是变相规约
 			//primary_expression
 			Node * pri = newNode(PRIMARY_EXPRESSION);
-			addChild(ret, newAttrNode(next(s)));
+			addChild(ret, newAttrNode(next(s, env)));
 			addChild(pri, NODE(expression));
 			X(')');
-			addChild(ret, newAttrNode(next(s)));
+			addChild(ret, newAttrNode(next(s, env)));
 
 			//postfix_expression
 			Node * post = newNode(POSTFIX_EXPRESSION);
@@ -189,12 +189,12 @@ P(conditional_expression)
 	CHECK_FIRST(conditional_expression);
 	Node * cexp = newNode(CONDITIONAL_EXPRESSION);
 	addChild(cexp, NODE(logical_OR_expression));
-	if (eos(s) || look(s).tag != '?') return cexp;
+	if (eos(s) || look(s, env).tag != '?') return cexp;
 
-	addChild(cexp, newNode(next(s).tag));
+	addChild(cexp, newNode(next(s, env).tag));
 	addChild(cexp, NODE(expression));
 	X(':');
-	addChild(cexp, newNode(next(s).tag));
+	addChild(cexp, newNode(next(s, env).tag));
 	addChild(cexp, NODE(constant_expression));
 	return cexp;
 }

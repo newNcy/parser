@@ -1,6 +1,5 @@
 #pragma once
 #include "lex.h"
-#include "env.h"
 #include <stdarg.h>
 
 
@@ -177,14 +176,12 @@ Node * newNode(Op op);
 Node * newAttrNode(Token t);
 void addChild(Node * p, Node * c);
 void printTag(Tag t);
-void printNode(Source * s, Node * n);
-int match(Source * s,Tag t);
+void printNode(Source * s, Env * env, Node * n);
+int match(Source * s, Env * env, Tag t);
 
 
-
-
-#define FIRST(X) int first_##X(Source * s) //求某个符号的first集
-#define IN_FIRST(X) (!eos(s) && first_##X(s) )
+#define FIRST(X) int first_##X(Source * s, Env * env) //求某个符号的first集
+#define IN_FIRST(X) (!eos(s) && first_##X(s, env) )
 static void println(Source * s)
 {
 	char * p = &(s->code[s->cur]); 
@@ -215,7 +212,7 @@ static int inset(int c, int set[], int len)
 	return 0;
 }
 
-#define INSET(X) inset(look(s).tag, X,sizeof(X)/sizeof(int) )
+#define INSET(X) inset(look(s, env).tag, X,sizeof(X)/sizeof(int) )
 #define CHECK_FIRST(X) \
 	if (eos(s) || !IN_FIRST(X)) {\
 	    printf("first of "#X" at %s:%d\n",__FILE__,__LINE__); \
@@ -233,7 +230,7 @@ static int inset(int c, int set[], int len)
 	printf("error: "f" at %s:%d\n",__FILE__,__LINE__,##__VA_ARGS__); \
 	println(s);\
 }	
-#define X(C) match(s,C);
+#define X(C) match(s, env, C);
 #define expected(X) \
 	error(#X);
 
@@ -258,7 +255,7 @@ P(S)																\
 		addChild(t, ret);											\
 		/* _s */													\
 		if (sizeof(_s))												\
-		addChild(t, newAttrNode(next(s)));							\
+		addChild(t, newAttrNode(next(s, env)));							\
 		/* A */														\
 		addChild(t, NODE(A));										\
 		ret = t;													\
@@ -352,3 +349,5 @@ P( declaration_list				);
 
 
 P_(expression);
+
+

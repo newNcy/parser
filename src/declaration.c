@@ -42,7 +42,7 @@ P(struct_declaration)
 		addChild(sd, NODE(struct_declarator_list));
 	}
 	X(';');
-	addChild(sd, newAttrNode(next(s)));
+	addChild(sd, newAttrNode(next(s, env)));
 	return sd;
 }
 P(struct_declaration_list)
@@ -64,24 +64,24 @@ P(struct_specifier)
 {
 	CHECK_FIRST(struct_specifier);
     Node * ss = newNode(STRUCT_SPECIFIER);
-    addChild(ss, newAttrNode(next(s)));
+    addChild(ss, newAttrNode(next(s, env)));
 
-	if (look(s).tag == Id) {
-		addChild(ss, newAttrNode(next(s)));
-		if (look(s).tag == '{') {
-			addChild(ss, newAttrNode(next(s)));
+	if (look(s, env).tag == Id) {
+		addChild(ss, newAttrNode(next(s, env)));
+		if (look(s, env).tag == '{') {
+			addChild(ss, newAttrNode(next(s, env)));
 			if (IN_FIRST(struct_declaration_list))
 				addChild(ss, NODE(struct_declaration_list));
 			X('}');
-			addChild(ss, newAttrNode(next(s)));
+			addChild(ss, newAttrNode(next(s, env)));
 		}
 	}else {
 		X('{');
-		addChild(ss, newAttrNode(next(s)));
+		addChild(ss, newAttrNode(next(s, env)));
 		if (IN_FIRST(struct_declarator_list))
 			addChild(ss, NODE(struct_declaration_list));
 		X('}');
-		addChild(ss, newAttrNode(next(s)));
+		addChild(ss, newAttrNode(next(s, env)));
 	}
     return  ss;
 }
@@ -90,9 +90,9 @@ P(enumerator)
 {
 	CHECK_FIRST(enumerator);
 	Node * e = newNode(ENUMERATOR);
-	addChild(e, newAttrNode(next(s)));
-	if (look(s).tag == '=') {
-		addChild(e, newAttrNode(next(s)));
+	addChild(e, newAttrNode(next(s, env)));
+	if (look(s, env).tag == '=') {
+		addChild(e, newAttrNode(next(s, env)));
 		Node * ce = NODE(constant_expression);
 		if (!ce) {
 			expected(Constant_expression);
@@ -107,16 +107,16 @@ P(enum_specifier)
 {
 	CHECK_FIRST(enum_specifier);
     Node * ss = newNode(ENUM_SPECIFIER);
-    addChild(ss, newNode(next(s).tag));
-	if (look(s).tag == Id) {
-		addChild(ss, newAttrNode(next(s)));
+    addChild(ss, newNode(next(s, env).tag));
+	if (look(s, env).tag == Id) {
+		addChild(ss, newAttrNode(next(s, env)));
 	}
 
-	if (look(s).tag == '{') {
-		addChild(ss, newAttrNode(next(s)));
+	if (look(s, env).tag == '{') {
+		addChild(ss, newAttrNode(next(s, env)));
 		addChild(ss, NODE(enumerator_list));
 		X('}');
-		addChild(ss, newAttrNode(next(s)));
+		addChild(ss, newAttrNode(next(s, env)));
 	}
     return  ss;
 }
@@ -125,7 +125,7 @@ P(type_qualifier)
 {
     CHECK_FIRST(type_qualifier);
     Node * tq = newNode(TYPE_QUALIFIER);
-    addChild(tq, newNode(next(s).tag));
+    addChild(tq, newNode(next(s, env).tag));
     return tq;
 }
 
@@ -138,7 +138,7 @@ P(type_specifier)
     }else if (IN_FIRST(enum_specifier)) {
         addChild(ts, NODE(enum_specifier));
     }else {
-        addChild(ts,newNode(next(s).tag));
+        addChild(ts,newNode(next(s, env).tag));
     }
     return ts;
 }
@@ -156,7 +156,7 @@ P(pointer)
 {
     CHECK_FIRST(pointer);
     Node * p = newNode(POINTER);
-    addChild(p, newNode(next(s).tag));
+    addChild(p, newNode(next(s, env).tag));
     if (IN_FIRST(type_qualifier_list)) {
         addChild(p, NODE(type_qualifier_list));
     }
@@ -194,12 +194,12 @@ P(compound_statement)
 {
 	CHECK_FIRST(compound_statement);
 	Node * cs = newNode(COMPOUND_STATEMENT);
-	addChild(cs, newAttrNode(next(s)));
+	addChild(cs, newAttrNode(next(s, env)));
 	if (IN_FIRST(block_item_list)) {
 		addChild(cs,NODE(block_item_list));
 	}
 	X('}');
-	addChild(cs, newAttrNode(next(s)));
+	addChild(cs, newAttrNode(next(s, env)));
 	return cs;
 	
 }
@@ -209,8 +209,8 @@ P(init_declarator)
 	CHECK_FIRST(init_declarator);
 	Node * id = newNode(INIT_DECLARATOR);
 	addChild(id, NODE(declarator));
-	if (look(s).tag == '=') {
-		addChild(id, newAttrNode(next(s)));
+	if (look(s, env).tag == '=') {
+		addChild(id, newAttrNode(next(s, env)));
 		addChild(id, NODE(initializer));
 	}
 	return id;
@@ -223,10 +223,10 @@ P(init_declarator_list)
 	Node * idl = newNode(INIT_DECLARATOR_LIST); 
 	addChild(idl, NODE(init_declarator));
 	//这回不用辅助过程了,显式迭代
-	while (!eos(s) && look(s).tag == ',') {
+	while (!eos(s) && look(s, env).tag == ',') {
 		Node * n = newNode(INIT_DECLARATOR_LIST);
 		addChild(n,idl);
-		addChild(n, newAttrNode(next(s)));
+		addChild(n, newAttrNode(next(s, env)));
 		Node * id = NODE(init_declarator);
 		if (!id) {
 			expected(Init_declarator);
@@ -248,8 +248,8 @@ P(declaration)
 	addChild(d, ds);
 	Node * idl = NODE(init_declarator_list);
 	if (idl) addChild(d, idl);
-	if (look(s).tag == ';') {
-		addChild(d, newAttrNode(next(s)));
+	if (look(s, env).tag == ';') {
+		addChild(d, newAttrNode(next(s, env)));
 	}else {
 		expected(;);
 	}
@@ -289,10 +289,10 @@ P(parameter_list)
 	CHECK_FIRST(parameter_list);
 	Node * pl = newNode(PARAMETER_LIST);
 	addChild(pl, NODE(parameter_declaration));
-	while (look(s).tag == ',') {
+	while (look(s, env).tag == ',') {
 		Node * t = newNode(PARAMETER_LIST);
 		addChild(t, pl);
-		addChild(t, newAttrNode(next(s)));
+		addChild(t, newAttrNode(next(s, env)));
 		addChild(t, NODE(parameter_declaration));
 		pl = t;
 	}
@@ -302,18 +302,18 @@ P(direct_declarator)
 {
 	CHECK_FIRST(direct_declarator);
 	Node * dd = newNode(DIRECT_ABSTRACT_DECLARATOR);
-	switch(look(s).tag) {
+	switch(look(s, env).tag) {
 		case Id:
-			addChild(dd, newAttrNode(next(s)));
+			addChild(dd, newAttrNode(next(s, env)));
 			dd->op = DIRECT_DECLARATOR;
 			break;
 		case '(':
-			addChild(dd, newNode(next(s).tag));
+			addChild(dd, newNode(next(s, env).tag));
 			Node * dr  = NODE(declarator);
 			dd->op = dr->op == DECLARATOR?DIRECT_DECLARATOR:ABSTRACT_DECLARATOR;
 			addChild(dd, dr);
 			X(')');
-			addChild(dd, newAttrNode(next(s)));
+			addChild(dd, newAttrNode(next(s, env)));
 			break;
 	}
 
@@ -322,8 +322,8 @@ P(direct_declarator)
 		if (!INSET(first)) break;
 		Node * dd_temp = newNode(dd->op);
 		addChild(dd_temp, dd);
-		Token l = look(s);
-		addChild(dd_temp, newAttrNode(next(s)));
+		Token l = look(s, env);
+		addChild(dd_temp, newAttrNode(next(s, env)));
 		switch (l.tag) {
 			case '[':
 				X(']');
@@ -334,7 +334,7 @@ P(direct_declarator)
 				X(')');
 				break;
 		}
-		addChild(dd_temp, newAttrNode(next(s)));
+		addChild(dd_temp, newAttrNode(next(s, env)));
 		dd = dd_temp;
 	}
 	return dd;
@@ -359,7 +359,7 @@ P(storage_class_specifier)
 {
 	CHECK_FIRST(storage_class_specifier);
 	Node * scs = newNode(STORAGE_CLASS_SPECIFIER);
-	addChild(scs, newNode(next(s).tag));
+	addChild(scs, newNode(next(s, env).tag));
 	return scs;
 }
 
@@ -390,10 +390,10 @@ P(initializer_list)
 	}
 	addChild(initerl, NODE(initializer));
 	
-	while (look(s).tag == ',') {
+	while (look(s, env).tag == ',') {
 		Node * t = newNode(INITIALIZER_LIST);
 		addChild(t, initerl);
-		addChild(t, newAttrNode(next(s)));
+		addChild(t, newAttrNode(next(s, env)));
 		if (IN_FIRST(designation)) {
 			addChild(t, NODE(designation));
 		}
@@ -407,19 +407,19 @@ P(initializer_list)
 P(designator)
 {
 	Node * dt = newNode(DESIGNATOR);
-	switch(look(s).tag) {
+	switch(look(s, env).tag) {
 		case '[':
-			addChild(dt, newAttrNode(next(s))); 
+			addChild(dt, newAttrNode(next(s, env))); 
 			addChild(dt, NODE(constant_expression));
 			X(']');
-			addChild(dt, newAttrNode(next(s)));
+			addChild(dt, newAttrNode(next(s, env)));
 			break;
 		case '.':
-			addChild(dt, newAttrNode(next(s))); 
-			if (look(s).tag != Id) {
+			addChild(dt, newAttrNode(next(s, env))); 
+			if (look(s, env).tag != Id) {
 				expected(Id);
 			}
-			addChild(dt, newAttrNode(next(s)));
+			addChild(dt, newAttrNode(next(s, env)));
 			break;
 		default:
 			return NULL;
@@ -434,7 +434,7 @@ P(designation)
 	Node * des = newNode(DESIGNATION);
 	addChild(des, NODE(designator_list));
 	X('=');
-	addChild(des, newAttrNode(next(s)));
+	addChild(des, newAttrNode(next(s, env)));
 	return des;
 }
 
@@ -442,10 +442,10 @@ P(initializer)
 {
 	CHECK_FIRST(initializer);
 	Node * initer = newNode(INITIALIZER);
-	if (look(s).tag == '{' ) {
-		addChild(initer, newAttrNode(next(s))); 
+	if (look(s, env).tag == '{' ) {
+		addChild(initer, newAttrNode(next(s, env))); 
 		addChild(initer, NODE(initializer_list));
-		match(s,'}');
+		match(s, env, '}');
 		addChild(initer, newNode('}'));
 	}else {
 		addChild(initer, NODE(assignment_expression));
@@ -460,10 +460,10 @@ P(external_declaration)
     //左公因子
     Node * n = newNode(EXTERNAL_DECLARATION);
     Node * declspec = NODE(declaration_specifiers);
-	if (look(s).tag == ';') { //external_declaration -> declaration (init_declarator_list) ;
+	if (look(s, env).tag == ';') { //external_declaration -> declaration (init_declarator_list) ;
 		Node * d = newNode(DECLARATION);
 		addChild(d, declspec);
-		addChild(d, newAttrNode(next(s))); 
+		addChild(d, newAttrNode(next(s, env))); 
 		addChild(n , d);
 		return n;
 	}
@@ -490,21 +490,21 @@ P(external_declaration)
 		Node * initdl = newNode(INIT_DECLARATOR_LIST);
 		Node * initd = newNode(INIT_DECLARATOR);
 		addChild(initd, dr);
-		if (look(s).tag == '=') {
-			addChild(initd, newAttrNode(next(s)));
+		if (look(s, env).tag == '=') {
+			addChild(initd, newAttrNode(next(s, env)));
 			addChild(initd, NODE(initializer));
 		}
 		addChild(initdl, initd);
-		while (look(s).tag == ',') {
+		while (look(s, env).tag == ',') {
 			Node * t = newNode(INIT_DECLARATOR_LIST);
 			addChild(t, initdl);
-			addChild(t, newAttrNode(next(s)));
+			addChild(t, newAttrNode(next(s, env)));
 			addChild(t, NODE(init_declarator));
 			initdl = t;
 		}
 		addChild(d, initdl);
 		X(';');
-		addChild(d, newAttrNode(next(s)));
+		addChild(d, newAttrNode(next(s, env)));
 		addChild(n, d);
 	}
 	return n;

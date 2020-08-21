@@ -33,7 +33,6 @@ void deleteSource(Source ** s)
 		if (_s && _s->len) {
 			free(_s->code);
 		}
-		free(_s->stringPool.pool);
 		free(_s);
 		*s = NULL;
 	}
@@ -52,11 +51,6 @@ Source * newSource(unsigned int size)
 	}
 	s->len = size;
 	s->cur = 0;
-
-	const int strPoolSize = 4096;
-	s->stringPool.size = strPoolSize;
-	s->stringPool.use = 0;
-	s->stringPool.pool = new(strPoolSize);
 
 	s->look.tag = NoLook;
 	return s;
@@ -105,45 +99,45 @@ Source * sourceFromStr(const char * code)
 	return source;
 }
 
-Token parseNum(Source * s)
+Token parseNum(Source * s, Env * env)
 {
 	char * c = s->code;
 	int cur = s->cur;
 	//-?\w+.?\w+ 
 	Token t;
-	int use = t.attr = s->stringPool.use;
+	int use = t.attr = env->stringPool.use;
 	t.tag = ConstInt; //默认int
 	// -?
 	if (c[cur] == '-') {
-		s->stringPool.pool[s->stringPool.use++] = c[cur++];
+		env->stringPool.pool[env->stringPool.use++] = c[cur++];
 	}
 	//\w+
 	while (!eos(s) && digit(c[cur])) {
-		s->stringPool.pool[s->stringPool.use++] = c[cur++];		
+		env->stringPool.pool[env->stringPool.use++] = c[cur++];		
 	}
 	//.?
 	if (c[cur] == '.') {	
 		t.tag = ConstDouble;
-		s->stringPool.pool[s->stringPool.use++] = c[cur++];
+		env->stringPool.pool[env->stringPool.use++] = c[cur++];
 	}else {
 		s->cur = cur;
-		s->stringPool.pool[s->stringPool.use++] = 0; 
+		env->stringPool.pool[env->stringPool.use++] = 0; 
 		return t;
 	}
 
 	//\w+
 	while (!eos(s) && digit(c[cur])) {
-		s->stringPool.pool[s->stringPool.use++] = c[cur++];		
+		env->stringPool.pool[env->stringPool.use++] = c[cur++];		
 	}
 	if (c[cur] == 'f' || c[cur] == 'F') {
 		t.tag = ConstFloat;
-		s->stringPool.pool[s->stringPool.use++] = c[cur++];
+		env->stringPool.pool[env->stringPool.use++] = c[cur++];
 	}else if (c[cur] == 'l' || c[cur] == 'L') {
 		t.tag = ConstLong;
-		s->stringPool.pool[s->stringPool.use++] = c[cur++];
+		env->stringPool.pool[env->stringPool.use++] = c[cur++];
 	}
 	s->cur = cur;
-	s->stringPool.pool[s->stringPool.use++] = 0; 
+	env->stringPool.pool[env->stringPool.use++] = 0; 
 	return t;
 }
 
@@ -180,21 +174,21 @@ int ** getTable()
 	fflush(stdout);
 	return table;
 }
-Token parseIdOrKeyword(Source * s)
+Token parseIdOrKeyword(Source * s, Env * env)
 {
 	int (* table)[26] = getTable();
 
 	int state = 1;
 	Token t;
 	t.tag = Id;
-	t.attr = s->stringPool.use;
+	t.attr = env->stringPool.use;
 	while (!eos(s)) {
 
 		char c = s->code[s->cur];
 		if (!digit(c) && !alpha(c) && c!='_') {
 			break;
 		}
-		s->stringPool.pool[s->stringPool.use++] = c;
+		env->stringPool.pool[env->stringPool.use++] = c;
 		if (state != Id && lowerCase(c))  {
 			if (state >= Void) {
 				state = Id;
@@ -213,11 +207,11 @@ Token parseIdOrKeyword(Source * s)
 	if (state < Void)
 		state = Id;
 	t.tag = state;
-	s->stringPool.pool[s->stringPool.use++] = 0; 
+	env->stringPool.pool[env->stringPool.use++] = 0; 
 	return t;
 }
 
-Token next(Source * s)
+Token next(Source * s, Env * env)
 {
 	Token t = {END, 0};
 	
@@ -243,7 +237,7 @@ Token next(Source * s)
 	if (code[s->cur] == '#' ) {
 		while (!eos(s) && code[s->cur] != '\n') s->cur ++;
 		s->cur ++;
-		return next(s);
+		return next(s, env);
 	}
 	// /* */
 	if (code[s->cur] == '/') {
@@ -251,7 +245,7 @@ Token next(Source * s)
 			s->cur += 2;
 			while ( !eos(s) && !(code[s->cur] == '*' && code[s->cur+1] == '/')) s->cur++;
 			s->cur += 2;
-			return next(s);
+			return next(s, env);
 		}else if (code[s->cur+1] == '/') {
 			s->cur += 2;
 			while (!eos(s) && code[s->cur] != '\n') s->cur ++;
@@ -262,22 +256,22 @@ Token next(Source * s)
 	if (eos(s)) return t;
 	t.tag = code[s->cur];
 	if (code[s->cur] == '-' && digit(code[s->cur+1])) {
-			return parseNum(s);
+			return parseNum(s, env);
 	}	
 	//标识符 或者关键字 
 	else if (alpha(code[s->cur]) || code[s->cur] == '_') {
-		return parseIdOrKeyword(s);
+		return parseIdOrKeyword(s, env);
 	}
 
 	//数字常量
 	else if (digit(code[s->cur])) {
-		return parseNum(s);
+		return parseNum(s, env);
 	}
 	//字符串常量
 	else if (code[s->cur] == '\"') {
 		s->cur ++;
 		t.tag = ConstStr;
-		t.attr = s->stringPool.use;
+		t.attr = env->stringPool.use;
 		while (code[s->cur] != '\"') {
 			char c = code[s->cur];
 			if (code[s->cur] == '\\') {
@@ -302,10 +296,10 @@ Token next(Source * s)
 						printf("不支持的转义字符\\%c\n",c);
 				}
 			}
-			s->stringPool.pool[s->stringPool.use++] = c;
+			env->stringPool.pool[env->stringPool.use++] = c;
 			s->cur ++;
 		}
-		s->stringPool.pool[s->stringPool.use++] = 0;
+		env->stringPool.pool[env->stringPool.use++] = 0;
 	}
 	
 	#define OP3(A,B,C,O) \
@@ -328,7 +322,7 @@ Token next(Source * s)
 	//表示F后面如果跟着S,那么它是O,否则它是F
 	OP2('-', '>', Pto)
 	OP2('-', '-', SSub)
-	OP2('+', '+', SSub)
+	OP2('+', '+', SPlus)
 	OP2('<', '<', Lsft)
 	OP2('>', '>', Rsft)
 
@@ -383,7 +377,7 @@ Token next(Source * s)
 	}else {
 		printf("unexpected character %c\n",code[s->cur]);
 		s->cur ++;
-		return next(s);
+		return next(s, env);
 	}
 	s->cur ++;
 	return t;

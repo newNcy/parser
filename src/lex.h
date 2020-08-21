@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "new.h"
+#include "env.h"
 
 typedef enum Tag
 {
@@ -104,22 +105,12 @@ typedef struct Token
 	Tag tag;
 	long attr;
 }Token ;
-
-struct StringPool
-{
-	int size;
-	int use;
-	char * pool;
-};
-typedef struct StringPool StringPool;
-
 struct _Source 
 {
 	char fileName[256];
 	int len;
 	char * code;
 	int cur;
-	StringPool stringPool;
 	Token look;
 };
 
@@ -139,21 +130,19 @@ Source * sourceFromStr(const char * code);
 
 
 
-Token parseNum(Source * s);
+Token parseNum(Source * s, Env *);
 
-Token parseIdOrKeyword(Source * s);
+Token parseIdOrKeyword(Source * s, Env * env);
 
-Token next(Source * s);
+Token next(Source * s,Env * env);
 /*
  * 向前看
  */
-inline static Token look(Source * s)
+inline static Token look(Source * s, Env * env)
 {
 	//向前看缓冲没有
 	if (s->look.tag == NoLook) {
-		s->look = next(s);
+		s->look = next(s, env);
 	}
 	return s->look;
 }
-
-Token next(Source * s);

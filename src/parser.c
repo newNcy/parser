@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "env.h"
 #include "lex.h"
 
 Node * newNode(Op op)
@@ -32,12 +33,12 @@ void addChild(Node * p, Node * c)
 void printTag(Tag t)
 {
     if(t < 256) {
-        printf("'%c'",t);
+        printf("'%c' ",t);
     }else {
-        printf("[%s]",tagName[t - Void]);
+        printf("[%s] ",tagName[t - Void]);
     }
 }
-void printNode(Source * s, Node * n)
+void printNode(Source * s, Env * env, Node * n)
 {
 	if (!n) return;
 	if (n->op > END) {
@@ -48,18 +49,18 @@ void printNode(Source * s, Node * n)
 		printTag(n->op);
 		Tag _t = n->op;
 		if (_t == Id || (ConstChar < _t && _t < ConstStr)) {
-			printf(" (%s) ",s->stringPool.pool + n->attr);
+			printf("(%s) ",env->stringPool.pool + n->attr);
 		}else if (_t == ConstChar) {
-			printf(" '%s' ",s->stringPool.pool + n->attr);
+			printf("'%s' ",env->stringPool.pool + n->attr);
 		}else if (_t == ConstStr) {
-			printf(" \"%s\" ",s->stringPool.pool + n->attr);
+			printf("\"%s\" ",env->stringPool.pool + n->attr);
 		}
 	}
 	fflush(stdout);
 }
-int match(Source * s,Tag t)
+int match(Source * s, Env * env, Tag t)
 {
-    Tag _t = look(s).tag;
+    Tag _t = look(s, env).tag;
     if (_t != t) {
         printf("expected ");
         printTag(t);

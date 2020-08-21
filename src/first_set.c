@@ -5,7 +5,7 @@
 
 FIRST(primary_expression)
 {
-	switch(look(s).tag) {
+	switch(look(s, env).tag) {
 		case Id:
 		case ConstChar:
 		case ConstInt:
@@ -29,7 +29,7 @@ FIRST(postfix_expression)
 
 FIRST(unary_operator)
 {
-	switch(look(s).tag) {
+	switch(look(s, env).tag) {
 		case '&':
 		case '*':
 		case '+':
@@ -45,7 +45,7 @@ FIRST(unary_operator)
 
 FIRST(unary_expression)
 {
-	switch(look(s).tag) {
+	switch(look(s, env).tag) {
 		/* first set of unary expr*/
 		case SPlus:
 		case SSub:
@@ -66,7 +66,7 @@ FIRST(unary_expression)
 
 FIRST(assignment_operator)
 {
-	switch(look(s).tag) {
+	switch(look(s, env).tag) {
 		case '=':
 		case Teq:
 		case Deq:
@@ -91,26 +91,26 @@ FIRST(argument_expression_list)
 
 FIRST(labeled_statement)
 {
-	return look(s).tag == Case || look(s).tag == Default;
+	return look(s, env).tag == Case || look(s, env).tag == Default;
 }
 FIRST(expression_statement)
 {
-	return IN_FIRST(expression) || look(s).tag == ';';
+	return IN_FIRST(expression) || look(s, env).tag == ';';
 }
 
 FIRST(selection_statement)
 {
-	return look(s).tag == If || look(s).tag == Switch;
+	return look(s, env).tag == If || look(s, env).tag == Switch;
 }
 
 FIRST(iteration_statement)
 {
-	return look(s).tag == While || look(s).tag == For;
+	return look(s, env).tag == While || look(s, env).tag == For;
 }
 
 FIRST(jump_statement) 
 {
-	return look(s).tag == Continue || look(s).tag == Break || look(s).tag == Return;
+	return look(s, env).tag == Continue || look(s, env).tag == Break || look(s, env).tag == Return;
 
 }
 FIRST(statement)
@@ -135,7 +135,7 @@ FIRST(block_item_list)
 
 FIRST(compound_statement)
 {
-	return look(s).tag == '{';
+	return look(s, env).tag == '{';
 }
 
 FIRST(declaration_list)
@@ -150,12 +150,12 @@ FIRST(designator_list)
 
 FIRST(designator)
 {
-	return look(s).tag == '[' || look(s).tag == '.';
+	return look(s, env).tag == '[' || look(s, env).tag == '.';
 }
 
 FIRST(cast_expression)
 {
-	return look(s).tag == '(' || IN_FIRST(unary_expression);
+	return look(s, env).tag == '(' || IN_FIRST(unary_expression);
 }
 
 FIRST(multiplicative_expression)
@@ -242,7 +242,7 @@ FIRST(struct_declaration_list)
 
 FIRST(enumerator)
 {
-	return look(s).tag == Id;
+	return look(s, env).tag == Id;
 }
 FIRST(enumerator_list)
 {
@@ -250,17 +250,17 @@ FIRST(enumerator_list)
 }
 FIRST(enum_specifier)
 {
-    if (look(s).tag == Enum) return 1;
+    if (look(s, env).tag == Enum) return 1;
     return 0;
 }
 FIRST(struct_specifier)
 {
-    if (look(s).tag == Struct) return 1;
+    if (look(s, env).tag == Struct) return 1;
     return 0;
 }
 FIRST(type_specifier)
 {
-    switch(look(s).tag) {
+    switch(look(s, env).tag) {
         case Void:
         case Char:
         case Short:
@@ -276,7 +276,7 @@ FIRST(type_specifier)
 }
 FIRST(function_specifier)
 {
-	return look(s).tag == Inline;
+	return look(s, env).tag == Inline;
 }
 FIRST(declaration_specifiers)
 {
@@ -285,12 +285,12 @@ FIRST(declaration_specifiers)
 
 FIRST(type_qualifier)
 {
-    if (look(s).tag == Const) return 1;
+    if (look(s, env).tag == Const) return 1;
     return 0;
 }
 FIRST(storage_class_specifier)
 {
-    switch(look(s).tag) {
+    switch(look(s, env).tag) {
     case Extern:
     case Static:
         return 1;
@@ -311,7 +311,7 @@ FIRST(parameter_list)
 
 FIRST(direct_declarator)
 {
-	switch (look(s).tag) {
+	switch (look(s, env).tag) {
 		case Id:
 		case '(':
 			return 1;
@@ -331,7 +331,7 @@ FIRST(type_qualifier_list)
 
 FIRST(pointer)
 {
-    if (look(s).tag == '*') return 1;
+    if (look(s, env).tag == '*') return 1;
     return 0;
 }
 
@@ -360,7 +360,7 @@ FIRST(initializer_list)
 
 FIRST(initializer)
 {
-	if (look(s).tag == '{') return 1;
+	if (look(s, env).tag == '{') return 1;
 	return IN_FIRST(assignment_expression);
 }
 
