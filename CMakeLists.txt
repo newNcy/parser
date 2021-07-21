@@ -16,6 +16,7 @@ add_executable(main
 	src/statement.c
     src/declaration.c
     src/parser.c
+    src/env.c
 	src/main.c
 	)
 

@@ -255,7 +255,7 @@ P(S)																\
 		addChild(t, ret);											\
 		/* _s */													\
 		if (sizeof(_s))												\
-		addChild(t, newAttrNode(next(s, env)));							\
+		addChild(t, newAttrNode(next(s, env)));						\
 		/* A */														\
 		addChild(t, NODE(A));										\
 		ret = t;													\

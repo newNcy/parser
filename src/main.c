@@ -41,8 +41,6 @@ void exec(Source * s, Node * root)
 		exec(s, p);
 		p = p->sbling;
 	}
-
-
 }
 
 
